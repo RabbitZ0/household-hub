@@ -1,26 +1,25 @@
 # Our Home – Michael & Amber
 
-A private, warm household hub with a special Baby tab.
+Private household hub with an upgraded Bills section.
 
-## What’s new
-- Custom warm background images
-- Soft animations and glass-morphism cards
-- Dedicated **Baby** tab with countdown, checklist, and notes
-- Better overall visual polish and hover effects
-- Due date setting (default Feb 15, 2027)
+## Bills upgrades
+- Full month calendar with colored dots for each bill
+- Recurring bills (Monthly, Weekly, Bi-weekly, Yearly, or One-time)
+- Custom color per bill (shown as a dot on the calendar and in the list)
+- Click a day on the calendar to filter bills for that date
+- Month navigation
+- Unpaid total
+- When you mark a recurring bill paid, the next due date is automatically set
 
-## Features
+## Other features
 - PIN protection
-- Dashboard with weather
 - Baby countdown & checklist
-- Plans, Groceries, Bills, Chores, Notes
-- Export / Import for syncing between devices
-
-All data stays in the browser.
+- Dashboard with weather
+- Plans, Groceries, Chores, Notes
+- Export / Import for syncing
 
 ## Deploy on GitHub Pages
-1. Upload **all** files (`index.html`, `bg-home.jpg`, `bg-baby.jpg`) to the root of your repository.
-2. Settings → Pages → Source: Deploy from a branch → `main` → `/ (root)`.
-3. Live at `https://yourusername.github.io/your-repo-name/`.
+1. Upload `index.html`, `bg-home.jpg`, and `bg-baby.jpg` to the root of your repo.
+2. Settings → Pages → Deploy from a branch → `main` → `/ (root)`.
 
-Set your shared PIN on first visit. Go to the Baby tab to set the exact due date. Use Sync to share data between phones.
+All data stays in your browser.

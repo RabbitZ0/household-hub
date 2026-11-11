@@ -62,6 +62,10 @@
     .amber { color: #f9a8d4; }
     .overdue { color: #f87171; font-weight: 600; }
     .due-today { color: #fbbf24; }
+    .bill-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin: 1px; }
+    .calendar-day { min-height: 72px; position: relative; }
+    .calendar-day:hover { background: rgba(212, 165, 116, 0.08); }
+    .calendar-day.today { outline: 2px solid #d4a574; }
     #toast {
       position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
       background: rgba(26,29,36,0.95); border: 1px solid #d4a574; color: #e8e6e3;
@@ -231,6 +235,18 @@
     </div>
 
     <div id="bills" class="tab-content hidden">
+      <div class="card p-5 mb-5">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-semibold warm"><i class="fa-solid fa-calendar-days mr-2"></i>Bills Calendar</h3>
+          <div class="flex gap-2 text-sm">
+            <button onclick="changeMonth(-1)" class="px-3 py-1 rounded bg-gray-800 hover:bg-gray-700">←</button>
+            <span id="calendar-month" class="px-3 py-1 font-medium"></span>
+            <button onclick="changeMonth(1)" class="px-3 py-1 rounded bg-gray-800 hover:bg-gray-700">→</button>
+          </div>
+        </div>
+        <div id="bills-calendar" class="grid grid-cols-7 gap-1 text-xs"></div>
+      </div>
+
       <form id="bill-form" class="card p-5 mb-5 grid md:grid-cols-2 gap-3">
         <input type="text" id="bill-name" placeholder="Bill name" class="border p-3 rounded-lg" required />
         <input type="number" step="0.01" id="bill-amount" placeholder="Amount" class="border p-3 rounded-lg" required />
@@ -240,8 +256,24 @@
           <option>Amber</option>
           <option>Shared</option>
         </select>
+        <select id="bill-recurrence" class="border p-3 rounded-lg">
+          <option value="once">One-time</option>
+          <option value="monthly" selected>Monthly</option>
+          <option value="weekly">Weekly</option>
+          <option value="biweekly">Bi-weekly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+        <div class="flex items-center gap-3">
+          <label class="text-sm text-gray-400">Color</label>
+          <input type="color" id="bill-color" value="#f87171" class="w-12 h-10 rounded cursor-pointer border-0 bg-transparent" />
+        </div>
         <button type="submit" class="bg-rose-600 text-white py-3 rounded-lg md:col-span-2 font-medium">Add Bill</button>
       </form>
+
+      <div class="flex justify-between items-center mb-3 text-sm">
+        <span id="bills-total" class="text-rose-400 font-medium"></span>
+        <button onclick="showAllBills()" class="text-gray-500 hover:text-gray-300">Show all</button>
+      </div>
       <div id="bills-list" class="space-y-3"></div>
     </div>
 
@@ -306,7 +338,7 @@
   <script>
     let data = {
       events: [], groceries: [], bills: [], chores: [], notes: [],
-      settings: { location: "", dueDate: "2027-02-15" },
+      settings: { location: "", dueDate: "2027-02-15", calendarMonth: null },
       baby: { checklist: [
         { text: "Hospital bag packed", done: false },
         { text: "Car seat installed", done: false },
@@ -412,6 +444,13 @@
         data = { ...data, ...parsed };
         if (!data.baby) data.baby = { checklist: [], notes: "" };
         if (!data.settings) data.settings = { location: "", dueDate: "2027-02-15" };
+        if (data.bills) {
+          data.bills.forEach(b => {
+            if (!b.nextDue) b.nextDue = b.due;
+            if (!b.recurrence) b.recurrence = 'once';
+            if (!b.color) b.color = '#f87171';
+          });
+        }
       }
       document.getElementById('weather-location').value = data.settings.location || "";
       document.getElementById('due-date').value = data.settings.dueDate || "2027-02-15";
@@ -538,7 +577,7 @@
       const unpaid = data.bills.filter(b => !b.paid);
       const total = unpaid.reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
       document.getElementById('dash-bills').innerHTML = unpaid.length
-        ? `<div class="mb-2"><span class="text-2xl font-semibold">$${total.toFixed(2)}</span> <span class="text-gray-500">due</span></div>` + unpaid.slice(0,3).map(b => `<div class="flex justify-between text-xs"><span>${b.name}</span><span class="${dateClass(b.due)}">$${b.amount}</span></div>`).join('')
+        ? `<div class="mb-2"><span class="text-2xl font-semibold">$${total.toFixed(2)}</span> <span class="text-gray-500">due</span></div>` + unpaid.slice(0,3).map(b => `<div class="flex justify-between text-xs"><span>${b.name}</span><span class="${dateClass(getNextDue(b))}">$${b.amount}</span></div>`).join('')
         : '<div class="text-gray-500">All paid ✓</div>';
     }
 
@@ -582,19 +621,112 @@
     }
 
     function renderBills() {
-      const sorted = [...data.bills].sort((a,b) => new Date(a.due) - new Date(b.due));
-      document.getElementById('bills-list').innerHTML = sorted.map((b, i) => `
+      renderBillsCalendar();
+      const filterDate = window._billsFilterDate || null;
+      let list = [...data.bills];
+      if (filterDate) {
+        list = list.filter(b => getNextDue(b) === filterDate || (b.recurrence !== 'once' && isDueOnDate(b, filterDate)));
+      }
+      const sorted = list.sort((a,b) => new Date(getNextDue(a)) - new Date(getNextDue(b)));
+      const unpaid = data.bills.filter(b => !b.paid);
+      const total = unpaid.reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
+      document.getElementById('bills-total').textContent = unpaid.length ? `$${total.toFixed(2)} unpaid` : 'All paid';
+
+      document.getElementById('bills-list').innerHTML = sorted.map((b, i) => {
+        const realIdx = data.bills.indexOf(b);
+        const next = getNextDue(b);
+        return `
         <div class="card p-4 flex justify-between items-center ${b.paid ? 'opacity-50' : ''}">
-          <div>
-            <div class="font-medium">${b.name} <span class="text-rose-400">$${b.amount}</span></div>
-            <div class="text-sm text-gray-400 mt-1">Due <span class="${dateClass(b.due)}">${b.due}</span> <span class="${nameClass(b.who)}">${b.who}</span></div>
+          <div class="flex items-start gap-3">
+            <span class="bill-dot mt-1.5" style="background:${b.color || '#f87171'}"></span>
+            <div>
+              <div class="font-medium">${b.name} <span class="text-rose-400">$${b.amount}</span></div>
+              <div class="text-sm text-gray-400 mt-1">
+                Next: <span class="${dateClass(next)}">${next}</span>
+                · ${b.recurrence || 'once'}
+                <span class="${nameClass(b.who)}">${b.who}</span>
+              </div>
+            </div>
           </div>
           <div class="flex items-center gap-3">
-            <label class="text-sm flex items-center gap-1.5"><input type="checkbox" ${b.paid ? 'checked' : ''} onchange="toggleBill(${i})" class="accent-[#d4a574]" /> Paid</label>
-            <button onclick="deleteBill(${i})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
+            <label class="text-sm flex items-center gap-1.5"><input type="checkbox" ${b.paid ? 'checked' : ''} onchange="toggleBill(${realIdx})" class="accent-[#d4a574]" /> Paid</label>
+            <button onclick="deleteBill(${realIdx})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
           </div>
-        </div>
-      `).join('') || '<p class="text-gray-500 text-center py-8">No bills</p>';
+        </div>`;
+      }).join('') || '<p class="text-gray-500 text-center py-8">No bills</p>';
+    }
+
+    function getNextDue(bill) {
+      return bill.nextDue || bill.due;
+    }
+
+    function isDueOnDate(bill, dateStr) {
+      if (!bill.recurrence || bill.recurrence === 'once') return getNextDue(bill) === dateStr;
+      const next = new Date(getNextDue(bill));
+      const target = new Date(dateStr);
+      // Simple check for current month view – expand later if needed
+      return next.toDateString() === target.toDateString();
+    }
+
+    function advanceRecurrence(bill) {
+      if (!bill.recurrence || bill.recurrence === 'once') return;
+      const d = new Date(getNextDue(bill));
+      if (bill.recurrence === 'monthly') d.setMonth(d.getMonth() + 1);
+      else if (bill.recurrence === 'weekly') d.setDate(d.getDate() + 7);
+      else if (bill.recurrence === 'biweekly') d.setDate(d.getDate() + 14);
+      else if (bill.recurrence === 'yearly') d.setFullYear(d.getFullYear() + 1);
+      bill.nextDue = d.toISOString().slice(0, 10);
+      bill.paid = false;
+    }
+
+    let calendarViewDate = new Date();
+
+    function changeMonth(delta) {
+      calendarViewDate.setMonth(calendarViewDate.getMonth() + delta);
+      renderBillsCalendar();
+    }
+
+    function showAllBills() {
+      window._billsFilterDate = null;
+      renderBills();
+    }
+
+    function renderBillsCalendar() {
+      const year = calendarViewDate.getFullYear();
+      const month = calendarViewDate.getMonth();
+      const monthName = calendarViewDate.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+      document.getElementById('calendar-month').textContent = monthName;
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const today = new Date().toDateString();
+
+      let html = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => `<div class="text-center text-gray-500 py-2">${d}</div>`).join('');
+
+      for (let i = 0; i < firstDay; i++) html += '<div></div>';
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const dateStr = date.toISOString().slice(0, 10);
+        const isToday = date.toDateString() === today;
+        const billsOnDay = data.bills.filter(b => {
+          const next = getNextDue(b);
+          return next === dateStr || (b.recurrence && b.recurrence !== 'once' && isDueOnDate(b, dateStr));
+        });
+        const dots = billsOnDay.slice(0, 4).map(b => `<span class="bill-dot" style="background:${b.color || '#f87171'}" title="${b.name}"></span>`).join('');
+        html += `<div class="calendar-day p-1 rounded text-center cursor-pointer ${isToday ? 'today' : ''}" onclick="filterBillsByDate('${dateStr}')">
+          <div class="text-sm">${day}</div>
+          <div class="flex justify-center flex-wrap mt-1">${dots}</div>
+        </div>`;
+      }
+
+      document.getElementById('bills-calendar').innerHTML = html;
+    }
+
+    function filterBillsByDate(dateStr) {
+      window._billsFilterDate = dateStr;
+      renderBills();
+      showToast(`Showing bills for ${dateStr}`);
     }
 
     function renderChores() {
@@ -638,7 +770,24 @@
 
     document.getElementById('event-form').onsubmit = e => { e.preventDefault(); data.events.push({ title: document.getElementById('event-title').value, date: document.getElementById('event-date').value, time: document.getElementById('event-time').value, who: document.getElementById('event-who').value, notes: document.getElementById('event-notes').value }); e.target.reset(); save(); showToast("Plan added"); };
     document.getElementById('grocery-form').onsubmit = e => { e.preventDefault(); data.groceries.push({ item: document.getElementById('grocery-item').value, qty: document.getElementById('grocery-qty').value, cat: document.getElementById('grocery-cat').value, who: document.getElementById('grocery-who').value, done: false }); e.target.reset(); save(); showToast("Item added"); };
-    document.getElementById('bill-form').onsubmit = e => { e.preventDefault(); data.bills.push({ name: document.getElementById('bill-name').value, amount: document.getElementById('bill-amount').value, due: document.getElementById('bill-due').value, who: document.getElementById('bill-who').value, paid: false }); e.target.reset(); save(); showToast("Bill added"); };
+    document.getElementById('bill-form').onsubmit = e => {
+      e.preventDefault();
+      const due = document.getElementById('bill-due').value;
+      data.bills.push({
+        name: document.getElementById('bill-name').value,
+        amount: document.getElementById('bill-amount').value,
+        due: due,
+        nextDue: due,
+        who: document.getElementById('bill-who').value,
+        recurrence: document.getElementById('bill-recurrence').value,
+        color: document.getElementById('bill-color').value,
+        paid: false
+      });
+      e.target.reset();
+      document.getElementById('bill-color').value = '#f87171';
+      save();
+      showToast("Bill added");
+    };
     document.getElementById('chore-form').onsubmit = e => { e.preventDefault(); data.chores.push({ title: document.getElementById('chore-title').value, who: document.getElementById('chore-who').value, freq: document.getElementById('chore-freq').value, due: document.getElementById('chore-due').value, done: false }); e.target.reset(); save(); showToast("Chore added"); };
     document.getElementById('note-form').onsubmit = e => { e.preventDefault(); data.notes.push({ text: document.getElementById('note-text').value, who: document.getElementById('note-who').value }); e.target.reset(); save(); showToast("Note added"); };
 
@@ -646,7 +795,15 @@
     function toggleGrocery(i) { data.groceries[i].done = !data.groceries[i].done; save(); }
     function deleteGrocery(i) { data.groceries.splice(i, 1); save(); }
     function clearCompletedGroceries() { data.groceries = data.groceries.filter(g => !g.done); save(); showToast("Completed items cleared"); }
-    function toggleBill(i) { data.bills[i].paid = !data.bills[i].paid; save(); }
+    function toggleBill(i) {
+      const bill = data.bills[i];
+      bill.paid = !bill.paid;
+      if (bill.paid && bill.recurrence && bill.recurrence !== 'once') {
+        advanceRecurrence(bill);
+        showToast("Next due date set");
+      }
+      save();
+    }
     function deleteBill(i) { if(confirm('Delete this bill?')) { data.bills.splice(i, 1); save(); } }
     function toggleChore(i) { data.chores[i].done = !data.chores[i].done; save(); }
     function deleteChore(i) { if(confirm('Delete this chore?')) { data.chores.splice(i, 1); save(); } }
@@ -670,6 +827,13 @@
           data = JSON.parse(e.target.result);
           if (!data.baby) data.baby = { checklist: [], notes: "" };
           if (!data.settings) data.settings = { location: "", dueDate: "2027-02-15" };
+          if (data.bills) {
+            data.bills.forEach(b => {
+              if (!b.nextDue) b.nextDue = b.due;
+              if (!b.recurrence) b.recurrence = 'once';
+              if (!b.color) b.color = '#f87171';
+            });
+          }
           save();
           showToast('Imported successfully');
           if (data.settings.location) fetchWeather();
