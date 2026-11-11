@@ -66,6 +66,19 @@
     .calendar-day { min-height: 72px; position: relative; }
     .calendar-day:hover { background: rgba(212, 165, 116, 0.08); }
     .calendar-day.today { outline: 2px solid #d4a574; }
+    .need-soon { border-left: 3px solid #fbbf24; }
+    .photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
+    #quick-add {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 50;
+      width: 56px; height: 56px; border-radius: 50%; background: #d4a574; color: #0f1115;
+      font-size: 28px; border: none; box-shadow: 0 4px 20px rgba(212,165,116,0.4);
+      cursor: pointer; transition: transform 0.2s;
+    }
+    #quick-add:hover { transform: scale(1.08); }
+    #quick-menu { position: fixed; bottom: 5rem; right: 1.5rem; z-index: 50; display: none; }
+    #quick-menu.show { display: block; }
+    .theme-warm { --bg: #1a1410; }
+    .theme-evening { --bg: #0d0a12; }
     #toast {
       position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
       background: rgba(26,29,36,0.95); border: 1px solid #d4a574; color: #e8e6e3;
@@ -135,9 +148,21 @@
 
     <!-- Dashboard -->
     <div id="dashboard" class="tab-content">
+      <div class="card p-5 mb-5 text-center">
+        <div class="text-sm text-gray-400">Emelie arrives in</div>
+        <div id="dash-countdown" class="text-3xl font-bold warm countdown-number">--</div>
+        <div class="text-xs text-gray-500" id="dash-countdown-label">days</div>
+      </div>
+
       <div id="weather-card" class="card p-5 mb-5 text-center hidden">
         <div id="weather-content" class="text-sm"></div>
       </div>
+
+      <div class="card p-5 mb-5">
+        <h3 class="font-semibold warm mb-3"><i class="fa-solid fa-calendar-week mr-2"></i>This Week</h3>
+        <div id="this-week" class="text-sm space-y-2"></div>
+      </div>
+
       <div class="grid md:grid-cols-2 gap-5 mb-6">
         <div class="card p-5">
           <h3 class="font-semibold warm mb-3"><i class="fa-solid fa-bolt mr-2"></i>Today’s Focus</h3>
@@ -165,7 +190,7 @@
       <div id="baby-bg" class="card p-6 mb-5 text-center relative overflow-hidden">
         <div class="relative z-10">
           <div class="text-5xl mb-3">👶</div>
-          <h2 class="serif text-3xl font-bold warm mb-1">Our Baby</h2>
+          <h2 class="serif text-3xl font-bold warm mb-1">Emelie Iona Ann King</h2>
           <p class="text-gray-400 text-sm mb-4">Arriving February 2027</p>
           <div id="countdown" class="text-4xl font-bold warm countdown-number mb-2">--</div>
           <p class="text-sm text-gray-400" id="countdown-label">days to go</p>
@@ -178,11 +203,55 @@
           <input type="date" id="due-date" class="border p-3 rounded-lg flex-1" />
           <button onclick="saveDueDate()" class="warm-bg px-5 py-3 rounded-lg text-sm font-medium">Save</button>
         </div>
-        <p class="text-xs text-gray-500 mt-2">Set the official due date for the countdown.</p>
       </div>
 
       <div class="card p-5 mb-5">
-        <h3 class="font-semibold warm mb-3">Baby Checklist</h3>
+        <h3 class="font-semibold warm mb-3">Kick Counter</h3>
+        <div class="text-center mb-3">
+          <div id="kick-today" class="text-3xl font-bold warm">0</div>
+          <p class="text-xs text-gray-500">kicks today</p>
+        </div>
+        <button onclick="logKick()" class="w-full warm-bg py-3 rounded-lg font-medium mb-3">Log Kick</button>
+        <div id="kick-history" class="text-xs text-gray-400 max-h-32 overflow-y-auto"></div>
+      </div>
+
+      <div class="card p-5 mb-5">
+        <h3 class="font-semibold warm mb-3">Hospital Bag</h3>
+        <div id="hospital-bag" class="space-y-2 text-sm"></div>
+        <div class="flex gap-2 mt-3">
+          <input type="text" id="new-hospital" placeholder="Add item..." class="border p-2 rounded-lg flex-1 text-sm" />
+          <button onclick="addHospitalItem()" class="bg-violet-600 text-white px-4 py-2 rounded-lg text-sm">Add</button>
+        </div>
+      </div>
+
+      <div class="card p-5 mb-5">
+        <h3 class="font-semibold warm mb-3">Postpartum Kit</h3>
+        <div id="postpartum-list" class="space-y-2 text-sm"></div>
+        <div class="flex gap-2 mt-3">
+          <input type="text" id="new-postpartum" placeholder="Add item..." class="border p-2 rounded-lg flex-1 text-sm" />
+          <button onclick="addPostpartumItem()" class="bg-violet-600 text-white px-4 py-2 rounded-lg text-sm">Add</button>
+        </div>
+      </div>
+
+      <div class="card p-5 mb-5">
+        <h3 class="font-semibold warm mb-3">Appointments & Growth</h3>
+        <form id="appt-form" class="flex flex-wrap gap-2 mb-3">
+          <input type="date" id="appt-date" class="border p-2 rounded-lg" required />
+          <input type="text" id="appt-title" placeholder="Visit / notes" class="border p-2 rounded-lg flex-1 min-w-[120px]" required />
+          <button type="submit" class="bg-sky-600 text-white px-4 py-2 rounded-lg text-sm">Add</button>
+        </form>
+        <div id="appointments-list" class="space-y-2 text-sm"></div>
+      </div>
+
+      <div class="card p-5 mb-5">
+        <h3 class="font-semibold warm mb-3">Photos</h3>
+        <input type="file" id="photo-input" accept="image/*" multiple class="text-sm mb-3" />
+        <button onclick="addPhotos()" class="warm-bg px-4 py-2 rounded-lg text-sm mb-3">Upload</button>
+        <div id="photo-gallery" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <div class="card p-5 mb-5">
+        <h3 class="font-semibold warm mb-3">General Checklist</h3>
         <div id="baby-checklist" class="space-y-2 text-sm"></div>
         <div class="flex gap-2 mt-4">
           <input type="text" id="new-check-item" placeholder="Add item..." class="border p-3 rounded-lg flex-1" />
@@ -191,8 +260,8 @@
       </div>
 
       <div class="card p-5">
-        <h3 class="font-semibold warm mb-3">Notes & Ideas</h3>
-        <textarea id="baby-notes" placeholder="Name ideas, nursery plans, questions for the doctor..." class="border p-3 rounded-lg w-full mb-3" rows="4"></textarea>
+        <h3 class="font-semibold warm mb-3">Notes</h3>
+        <textarea id="baby-notes" placeholder="Questions for the doctor, nursery plans..." class="border p-3 rounded-lg w-full mb-3" rows="4"></textarea>
         <button onclick="saveBabyNotes()" class="warm-bg px-5 py-2.5 rounded-lg text-sm font-medium">Save Notes</button>
       </div>
     </div>
@@ -226,6 +295,9 @@
           <option>Michael</option>
           <option>Amber</option>
         </select>
+        <label class="flex items-center gap-1 text-sm text-gray-400">
+          <input type="checkbox" id="grocery-needsoon" class="accent-[#d4a574]" /> Need soon
+        </label>
         <button type="submit" class="bg-emerald-600 text-white px-5 py-3 rounded-lg">Add</button>
       </form>
       <div class="flex justify-end mb-3">
@@ -323,6 +395,24 @@
           <button onclick="importData()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm">Import</button>
         </div>
         <div class="border-t border-gray-800 pt-5">
+          <h3 class="font-semibold mb-3"><i class="fa-solid fa-palette mr-2"></i>Theme</h3>
+          <select id="theme-select" class="border p-3 rounded-lg w-full mb-3" onchange="changeTheme()">
+            <option value="default">Default</option>
+            <option value="warm">Warm</option>
+            <option value="evening">Evening</option>
+          </select>
+        </div>
+        <div class="border-t border-gray-800 pt-5">
+          <h3 class="font-semibold mb-3"><i class="fa-solid fa-wallet mr-2"></i>Monthly Budget Snapshot</h3>
+          <input type="number" id="monthly-budget" placeholder="Monthly income / budget" class="border p-3 rounded-lg w-full mb-3" />
+          <button onclick="saveBudget()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm">Save</button>
+          <div id="budget-display" class="text-sm mt-3 text-gray-400"></div>
+        </div>
+        <div class="border-t border-gray-800 pt-5">
+          <h3 class="font-semibold mb-3"><i class="fa-solid fa-clock mr-2"></i>Last Export</h3>
+          <p id="last-export" class="text-sm text-gray-500">Never</p>
+        </div>
+        <div class="border-t border-gray-800 pt-5">
           <h3 class="font-semibold mb-3"><i class="fa-solid fa-location-dot mr-2"></i>Weather Location</h3>
           <input type="text" id="weather-location" placeholder="City name (e.g. Austin, TX)" class="border p-3 rounded-lg mb-3 w-full" />
           <button onclick="saveLocation()" class="bg-sky-600 text-white px-5 py-2.5 rounded-lg text-sm">Save Location</button>
@@ -336,16 +426,44 @@
     </div>
   </div>
 
+  <button id="quick-add" onclick="toggleQuickMenu()">+</button>
+  <div id="quick-menu" class="card p-3 space-y-2 text-sm">
+    <button onclick="quickAdd('grocery')" class="block w-full text-left px-3 py-2 hover:bg-gray-800 rounded">Grocery item</button>
+    <button onclick="quickAdd('chore')" class="block w-full text-left px-3 py-2 hover:bg-gray-800 rounded">Chore</button>
+    <button onclick="quickAdd('note')" class="block w-full text-left px-3 py-2 hover:bg-gray-800 rounded">Note</button>
+    <button onclick="quickAdd('bill')" class="block w-full text-left px-3 py-2 hover:bg-gray-800 rounded">Bill</button>
+  </div>
+
   <script>
     let data = {
       events: [], groceries: [], bills: [], chores: [], notes: [],
-      settings: { location: "", dueDate: "2027-02-15", calendarMonth: null },
-      baby: { checklist: [
-        { text: "Hospital bag packed", done: false },
-        { text: "Car seat installed", done: false },
-        { text: "Nursery ready", done: false },
-        { text: "Birth plan discussed", done: false }
-      ], notes: "" }
+      settings: { location: "", dueDate: "2027-02-15", theme: "default", monthlyBudget: 0, lastExport: null },
+      baby: { 
+        checklist: [
+          { text: "Hospital bag packed", done: false },
+          { text: "Car seat installed", done: false },
+          { text: "Nursery ready", done: false },
+          { text: "Birth plan discussed", done: false }
+        ], 
+        notes: "",
+        hospitalBag: [
+          { text: "Insurance cards & ID", done: false },
+          { text: "Phone charger", done: false },
+          { text: "Comfortable clothes", done: false },
+          { text: "Toiletries", done: false },
+          { text: "Going-home outfit for baby", done: false }
+        ],
+        postpartum: [
+          { text: "Maxi pads / adult diapers", done: false },
+          { text: "Nursing bras / pads", done: false },
+          { text: "Peri bottle", done: false },
+          { text: "Easy snacks", done: false },
+          { text: "Support person plan", done: false }
+        ],
+        kicks: [],
+        photos: [],
+        appointments: []
+      }
     };
 
     function showToast(msg) {
@@ -443,21 +561,42 @@
       if (saved) {
         const parsed = JSON.parse(saved);
         data = { ...data, ...parsed };
-        if (!data.baby) data.baby = { checklist: [], notes: "" };
-        if (!data.settings) data.settings = { location: "", dueDate: "2027-02-15" };
+        if (!data.baby) data.baby = { checklist: [], notes: "", hospitalBag: [], postpartum: [], kicks: [], photos: [], appointments: [] };
+        if (!data.baby.hospitalBag) data.baby.hospitalBag = [];
+        if (!data.baby.postpartum) data.baby.postpartum = [];
+        if (!data.baby.kicks) data.baby.kicks = [];
+        if (!data.baby.photos) data.baby.photos = [];
+        if (!data.baby.appointments) data.baby.appointments = [];
+        if (!data.settings) data.settings = { location: "", dueDate: "2027-02-15", theme: "default", monthlyBudget: 0, lastExport: null };
         if (data.bills) {
           data.bills.forEach(b => {
             if (!b.nextDue) b.nextDue = b.due;
             if (!b.recurrence) b.recurrence = 'once';
             if (!b.color) b.color = '#f87171';
+            if (!b.paidHistory) b.paidHistory = [];
+          });
+        }
+        if (data.chores) {
+          const today = new Date().toISOString().slice(0,10);
+          data.chores.forEach(c => {
+            if (c.done && c.freq === 'daily') c.done = false;
+            if (c.done && c.freq === 'weekly' && c.lastReset !== today) {
+              // simple weekly reset if more than 6 days
+              c.done = false;
+            }
           });
         }
       }
       document.getElementById('weather-location').value = data.settings.location || "";
       document.getElementById('due-date').value = data.settings.dueDate || "2027-02-15";
       document.getElementById('baby-notes').value = data.baby.notes || "";
+      document.getElementById('theme-select').value = data.settings.theme || "default";
+      document.getElementById('monthly-budget').value = data.settings.monthlyBudget || "";
+      applyTheme();
       renderAll();
       if (data.settings.location) fetchWeather();
+      updateExportReminder();
+      updateBudgetDisplay();
     }
 
     function save() {
@@ -562,6 +701,33 @@
     }
 
     function renderDashboard() {
+      // Countdown on dashboard
+      updateCountdown();
+      const due = data.settings.dueDate || "2027-02-15";
+      const diff = Math.ceil((new Date(due) - new Date()) / 86400000);
+      document.getElementById('dash-countdown').textContent = diff > 0 ? diff : (diff === 0 ? 'Today' : Math.abs(diff));
+      document.getElementById('dash-countdown-label').textContent = diff > 0 ? 'days' : (diff === 0 ? '!' : 'days ago');
+
+      // This week
+      const weekEnd = new Date(); weekEnd.setDate(weekEnd.getDate() + 7);
+      const weekItems = [];
+      data.bills.filter(b => !b.paid).forEach(b => {
+        const d = new Date(getNextDue(b));
+        if (d <= weekEnd) weekItems.push({ type: 'Bill', text: b.name, date: getNextDue(b) });
+      });
+      data.chores.filter(c => !c.done && c.due).forEach(c => {
+        const d = new Date(c.due);
+        if (d <= weekEnd) weekItems.push({ type: 'Chore', text: c.title, date: c.due });
+      });
+      data.events.forEach(e => {
+        const d = new Date(e.date);
+        if (d <= weekEnd && d >= new Date().setHours(0,0,0,0)) weekItems.push({ type: 'Plan', text: e.title, date: e.date });
+      });
+      weekItems.sort((a,b) => new Date(a.date) - new Date(b.date));
+      document.getElementById('this-week').innerHTML = weekItems.length
+        ? weekItems.slice(0,8).map(i => `<div class="flex justify-between"><span>${i.type}: ${i.text}</span><span class="text-gray-500 text-xs">${i.date}</span></div>`).join('')
+        : '<div class="text-gray-500">Nothing due this week</div>';
+
       const openChores = data.chores.filter(c => !c.done).slice(0, 5);
       document.getElementById('dash-chores').innerHTML = openChores.length
         ? openChores.map(c => `<div class="flex justify-between"><span>${c.title}</span><span class="${nameClass(c.who)} text-xs font-medium">${c.who}</span></div>`).join('')
@@ -606,7 +772,7 @@
         html += `<div><h4 class="text-xs uppercase tracking-wider text-gray-500 mb-2">${cat}</h4>`;
         html += byCat[cat].map(g => {
           const idx = data.groceries.indexOf(g);
-          return `<div class="card p-3 flex items-center gap-3 mb-2"><input type="checkbox" onchange="toggleGrocery(${idx})" class="accent-[#d4a574]" /><span>${g.item} ${g.qty ? '<span class="text-gray-500">('+g.qty+')</span>' : ''} <span class="${nameClass(g.who)} text-xs">${g.who || ''}</span></span><button onclick="deleteGrocery(${idx})" class="ml-auto text-gray-600 hover:text-rose-400 text-xs">✕</button></div>`;
+          return `<div class="card p-3 flex items-center gap-3 mb-2 ${g.needSoon ? 'need-soon' : ''}"><input type="checkbox" onchange="toggleGrocery(${idx})" class="accent-[#d4a574]" /><span>${g.item} ${g.qty ? '<span class="text-gray-500">('+g.qty+')</span>' : ''} ${g.needSoon ? '<span class="text-xs text-amber-400">• soon</span>' : ''} <span class="${nameClass(g.who)} text-xs">${g.who || ''}</span></span><button onclick="deleteGrocery(${idx})" class="ml-auto text-gray-600 hover:text-rose-400 text-xs">✕</button></div>`;
         }).join('');
         html += '</div>';
       });
@@ -787,17 +953,186 @@
     }
 
     function renderBaby() {
-      document.getElementById('baby-checklist').innerHTML = data.baby.checklist.map((item, i) => `
+      // General checklist
+      document.getElementById('baby-checklist').innerHTML = (data.baby.checklist || []).map((item, i) => `
         <div class="flex items-center gap-3 py-1">
           <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleCheck(${i})" class="accent-[#d4a574]" />
           <span class="${item.done ? 'line-through text-gray-500' : ''}">${item.text}</span>
           <button onclick="deleteCheck(${i})" class="ml-auto text-gray-600 hover:text-rose-400 text-xs">✕</button>
         </div>
-      `).join('') || '<p class="text-gray-500 text-sm">No checklist items yet</p>';
+      `).join('') || '<p class="text-gray-500 text-sm">No items</p>';
+
+      // Hospital bag
+      document.getElementById('hospital-bag').innerHTML = (data.baby.hospitalBag || []).map((item, i) => `
+        <div class="flex items-center gap-3 py-1">
+          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleHospital(${i})" class="accent-[#d4a574]" />
+          <span class="${item.done ? 'line-through text-gray-500' : ''}">${item.text}</span>
+          <button onclick="deleteHospital(${i})" class="ml-auto text-gray-600 hover:text-rose-400 text-xs">✕</button>
+        </div>
+      `).join('') || '<p class="text-gray-500 text-sm">Empty</p>';
+
+      // Postpartum
+      document.getElementById('postpartum-list').innerHTML = (data.baby.postpartum || []).map((item, i) => `
+        <div class="flex items-center gap-3 py-1">
+          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="togglePostpartum(${i})" class="accent-[#d4a574]" />
+          <span class="${item.done ? 'line-through text-gray-500' : ''}">${item.text}</span>
+          <button onclick="deletePostpartum(${i})" class="ml-auto text-gray-600 hover:text-rose-400 text-xs">✕</button>
+        </div>
+      `).join('') || '<p class="text-gray-500 text-sm">Empty</p>';
+
+      // Kicks
+      const today = new Date().toISOString().slice(0,10);
+      const todayKicks = (data.baby.kicks || []).filter(k => k.date === today).length;
+      document.getElementById('kick-today').textContent = todayKicks;
+      document.getElementById('kick-history').innerHTML = (data.baby.kicks || []).slice(-10).reverse().map(k => 
+        `<div>${k.date} ${k.time || ''} — ${k.count || 1} kick${(k.count||1)>1?'s':''}</div>`
+      ).join('') || '<div class="text-gray-600">No kicks logged yet</div>';
+
+      // Appointments
+      document.getElementById('appointments-list').innerHTML = (data.baby.appointments || []).sort((a,b)=>new Date(a.date)-new Date(b.date)).map((a,i) => `
+        <div class="flex justify-between py-1">
+          <span>${a.date} — ${a.title}</span>
+          <button onclick="deleteAppt(${i})" class="text-gray-600 hover:text-rose-400 text-xs">✕</button>
+        </div>
+      `).join('') || '<p class="text-gray-500 text-sm">None yet</p>';
+
+      // Photos
+      document.getElementById('photo-gallery').innerHTML = (data.baby.photos || []).map((p,i) => `
+        <div class="relative">
+          <img src="${p.data}" class="photo-thumb" />
+          <button onclick="deletePhoto(${i})" class="absolute -top-1 -right-1 bg-rose-600 text-white rounded-full w-5 h-5 text-xs">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function logKick() {
+      const now = new Date();
+      const date = now.toISOString().slice(0,10);
+      const time = now.toTimeString().slice(0,5);
+      if (!data.baby.kicks) data.baby.kicks = [];
+      data.baby.kicks.push({ date, time, count: 1 });
+      save();
+      showToast('Kick logged');
+    }
+
+    function addHospitalItem() {
+      const text = document.getElementById('new-hospital').value.trim();
+      if (!text) return;
+      if (!data.baby.hospitalBag) data.baby.hospitalBag = [];
+      data.baby.hospitalBag.push({ text, done: false });
+      document.getElementById('new-hospital').value = '';
+      save();
+    }
+    function toggleHospital(i) { data.baby.hospitalBag[i].done = !data.baby.hospitalBag[i].done; save(); }
+    function deleteHospital(i) { data.baby.hospitalBag.splice(i,1); save(); }
+
+    function addPostpartumItem() {
+      const text = document.getElementById('new-postpartum').value.trim();
+      if (!text) return;
+      if (!data.baby.postpartum) data.baby.postpartum = [];
+      data.baby.postpartum.push({ text, done: false });
+      document.getElementById('new-postpartum').value = '';
+      save();
+    }
+    function togglePostpartum(i) { data.baby.postpartum[i].done = !data.baby.postpartum[i].done; save(); }
+    function deletePostpartum(i) { data.baby.postpartum.splice(i,1); save(); }
+
+    document.getElementById('appt-form').onsubmit = e => {
+      e.preventDefault();
+      if (!data.baby.appointments) data.baby.appointments = [];
+      data.baby.appointments.push({
+        date: document.getElementById('appt-date').value,
+        title: document.getElementById('appt-title').value
+      });
+      e.target.reset();
+      save();
+      showToast('Appointment added');
+    };
+    function deleteAppt(i) { data.baby.appointments.splice(i,1); save(); }
+
+    function addPhotos() {
+      const files = document.getElementById('photo-input').files;
+      if (!files.length) return;
+      if (!data.baby.photos) data.baby.photos = [];
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          data.baby.photos.push({ data: e.target.result, name: file.name });
+          save();
+        };
+        reader.readAsDataURL(file);
+      });
+      document.getElementById('photo-input').value = '';
+      showToast('Photos added');
+    }
+    function deletePhoto(i) { data.baby.photos.splice(i,1); save(); }
+
+    function toggleQuickMenu() {
+      document.getElementById('quick-menu').classList.toggle('show');
+    }
+    function quickAdd(type) {
+      document.getElementById('quick-menu').classList.remove('show');
+      showTab(type === 'grocery' ? 'groceries' : type === 'bill' ? 'bills' : type === 'chore' ? 'chores' : 'notes');
+      setTimeout(() => {
+        const map = { grocery: 'grocery-item', chore: 'chore-title', note: 'note-text', bill: 'bill-name' };
+        const el = document.getElementById(map[type]);
+        if (el) el.focus();
+      }, 100);
+    }
+
+    function changeTheme() {
+      data.settings.theme = document.getElementById('theme-select').value;
+      applyTheme();
+      save();
+    }
+    function applyTheme() {
+      document.body.classList.remove('theme-warm', 'theme-evening');
+      if (data.settings.theme === 'warm') document.body.classList.add('theme-warm');
+      if (data.settings.theme === 'evening') document.body.classList.add('theme-evening');
+    }
+
+    function saveBudget() {
+      data.settings.monthlyBudget = parseFloat(document.getElementById('monthly-budget').value) || 0;
+      save();
+      updateBudgetDisplay();
+      showToast('Budget saved');
+    }
+    function updateBudgetDisplay() {
+      const el = document.getElementById('budget-display');
+      if (!el) return;
+      const budget = data.settings.monthlyBudget || 0;
+      const unpaid = data.bills.filter(b => !b.paid).reduce((s,b) => s + parseFloat(b.amount||0), 0);
+      const left = budget - unpaid;
+      el.innerHTML = budget ? `Unpaid bills: $${unpaid.toFixed(2)}<br>Remaining: <span class="${left>=0?'text-emerald-400':'text-rose-400'}">$${left.toFixed(2)}</span>` : '';
+    }
+
+    function updateExportReminder() {
+      const el = document.getElementById('last-export');
+      if (!el) return;
+      if (!data.settings.lastExport) {
+        el.textContent = 'Never — consider exporting soon';
+        return;
+      }
+      const days = Math.floor((Date.now() - new Date(data.settings.lastExport)) / 86400000);
+      el.textContent = days === 0 ? 'Today' : `${days} day${days>1?'s':''} ago`;
+      if (days > 14) el.textContent += ' — time for a backup?';
     }
 
     document.getElementById('event-form').onsubmit = e => { e.preventDefault(); data.events.push({ title: document.getElementById('event-title').value, date: document.getElementById('event-date').value, time: document.getElementById('event-time').value, who: document.getElementById('event-who').value, notes: document.getElementById('event-notes').value }); e.target.reset(); save(); showToast("Plan added"); };
-    document.getElementById('grocery-form').onsubmit = e => { e.preventDefault(); data.groceries.push({ item: document.getElementById('grocery-item').value, qty: document.getElementById('grocery-qty').value, cat: document.getElementById('grocery-cat').value, who: document.getElementById('grocery-who').value, done: false }); e.target.reset(); save(); showToast("Item added"); };
+    document.getElementById('grocery-form').onsubmit = e => { 
+      e.preventDefault(); 
+      data.groceries.push({ 
+        item: document.getElementById('grocery-item').value, 
+        qty: document.getElementById('grocery-qty').value, 
+        cat: document.getElementById('grocery-cat').value, 
+        who: document.getElementById('grocery-who').value, 
+        needSoon: document.getElementById('grocery-needsoon').checked,
+        done: false 
+      }); 
+      e.target.reset(); 
+      save(); 
+      showToast("Item added"); 
+    };
     let editingBillIndex = null;
 
     function editBill(i) {
@@ -861,7 +1196,12 @@
     function clearCompletedGroceries() { data.groceries = data.groceries.filter(g => !g.done); save(); showToast("Completed items cleared"); }
     function toggleBill(i) {
       const bill = data.bills[i];
+      const wasPaid = bill.paid;
       bill.paid = !bill.paid;
+      if (bill.paid && !wasPaid) {
+        if (!bill.paidHistory) bill.paidHistory = [];
+        bill.paidHistory.push(new Date().toISOString().slice(0,10));
+      }
       if (bill.paid && bill.recurrence && bill.recurrence !== 'once') {
         advanceRecurrence(bill);
         showToast("Next due date set");
@@ -874,12 +1214,15 @@
     function deleteNote(i) { data.notes.splice(i, 1); save(); }
 
     function exportData() {
+      data.settings.lastExport = new Date().toISOString();
       const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `our-home-data-${new Date().toISOString().slice(0,10)}.json`;
       a.click();
+      save();
       showToast("Data exported");
+      updateExportReminder();
     }
 
     function importData() {
