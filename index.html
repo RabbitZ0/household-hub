@@ -19,6 +19,8 @@
     input:focus, textarea:focus, select:focus { border-color: #d4a574 !important; outline: none; }
     .warm { color: #d4a574; }
     .warm-bg { background: #d4a574; color: #0f1115; }
+    .michael { color: #7dd3fc; }
+    .amber { color: #f9a8d4; }
   </style>
 </head>
 <body>
@@ -28,7 +30,7 @@
       <div class="mb-8">
         <div class="text-6xl mb-4">🏡</div>
         <h2 id="pin-title" class="serif text-4xl font-bold warm mb-2">Our Home</h2>
-        <p id="pin-subtitle" class="text-gray-400">A private space for the two of you</p>
+        <p id="pin-subtitle" class="text-gray-400">Michael & Amber’s private space</p>
       </div>
       <div class="card p-8">
         <p id="pin-prompt" class="text-sm text-gray-400 mb-4">Choose a 4–6 digit PIN both of you will use</p>
@@ -45,32 +47,39 @@
       <h1 class="serif text-4xl font-bold warm flex items-center justify-center gap-3">
         🏡 Our Home
       </h1>
-      <p class="text-gray-500 mt-1 text-sm">Shared quietly between us</p>
+      <p class="text-gray-500 mt-1 text-sm">Michael & Amber</p>
     </header>
 
     <!-- Tabs -->
-    <nav class="flex border-b border-gray-800 mb-8 overflow-x-auto justify-center">
-      <button onclick="showTab('dashboard')" class="tab px-5 py-3 font-medium tab-active" data-tab="dashboard">Home</button>
-      <button onclick="showTab('events')" class="tab px-5 py-3 font-medium" data-tab="events">Plans</button>
-      <button onclick="showTab('groceries')" class="tab px-5 py-3 font-medium" data-tab="groceries">Groceries</button>
-      <button onclick="showTab('bills')" class="tab px-5 py-3 font-medium" data-tab="bills">Bills</button>
-      <button onclick="showTab('notes')" class="tab px-5 py-3 font-medium" data-tab="notes">Notes</button>
-      <button onclick="showTab('data')" class="tab px-5 py-3 font-medium" data-tab="data">Sync</button>
+    <nav class="flex border-b border-gray-800 mb-8 overflow-x-auto justify-center text-sm">
+      <button onclick="showTab('dashboard')" class="tab px-4 py-3 font-medium tab-active" data-tab="dashboard">Home</button>
+      <button onclick="showTab('events')" class="tab px-4 py-3 font-medium" data-tab="events">Plans</button>
+      <button onclick="showTab('groceries')" class="tab px-4 py-3 font-medium" data-tab="groceries">Groceries</button>
+      <button onclick="showTab('bills')" class="tab px-4 py-3 font-medium" data-tab="bills">Bills</button>
+      <button onclick="showTab('chores')" class="tab px-4 py-3 font-medium" data-tab="chores">Chores</button>
+      <button onclick="showTab('notes')" class="tab px-4 py-3 font-medium" data-tab="notes">Notes</button>
+      <button onclick="showTab('data')" class="tab px-4 py-3 font-medium" data-tab="data">Sync</button>
     </nav>
 
     <!-- Dashboard -->
     <div id="dashboard" class="tab-content">
-      <div class="grid md:grid-cols-3 gap-5 mb-8">
+      <div class="grid md:grid-cols-2 gap-5 mb-6">
         <div class="card p-5">
-          <h3 class="font-semibold warm mb-3 flex items-center gap-2"><i class="fa-solid fa-calendar-days"></i> Upcoming</h3>
-          <div id="dash-events" class="text-sm space-y-2 text-gray-300"></div>
+          <h3 class="font-semibold warm mb-3">Today’s Focus</h3>
+          <div id="dash-chores" class="text-sm space-y-2"></div>
         </div>
         <div class="card p-5">
-          <h3 class="font-semibold text-emerald-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-basket-shopping"></i> Groceries</h3>
+          <h3 class="font-semibold warm mb-3">Upcoming Plans</h3>
+          <div id="dash-events" class="text-sm space-y-2 text-gray-300"></div>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-5">
+        <div class="card p-5">
+          <h3 class="font-semibold text-emerald-400 mb-3">Groceries</h3>
           <div id="dash-groceries" class="text-sm text-gray-300"></div>
         </div>
         <div class="card p-5">
-          <h3 class="font-semibold text-rose-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-receipt"></i> Bills</h3>
+          <h3 class="font-semibold text-rose-400 mb-3">Bills</h3>
           <div id="dash-bills" class="text-sm text-gray-300"></div>
         </div>
       </div>
@@ -82,7 +91,11 @@
         <input type="text" id="event-title" placeholder="What's the plan?" class="border p-3 rounded-lg" required />
         <input type="date" id="event-date" class="border p-3 rounded-lg" required />
         <input type="time" id="event-time" class="border p-3 rounded-lg" />
-        <input type="text" id="event-who" placeholder="Who" class="border p-3 rounded-lg" />
+        <select id="event-who" class="border p-3 rounded-lg">
+          <option value="">Both / Shared</option>
+          <option>Michael</option>
+          <option>Amber</option>
+        </select>
         <textarea id="event-notes" placeholder="Details" class="border p-3 rounded-lg md:col-span-2" rows="2"></textarea>
         <button type="submit" class="warm-bg py-3 rounded-lg md:col-span-2 font-medium">Add Plan</button>
       </form>
@@ -96,6 +109,11 @@
         <input type="text" id="grocery-qty" placeholder="Qty" class="border p-3 rounded-lg w-20" />
         <select id="grocery-cat" class="border p-3 rounded-lg">
           <option>Produce</option><option>Dairy</option><option>Meat</option><option>Pantry</option><option>Frozen</option><option>Other</option>
+        </select>
+        <select id="grocery-who" class="border p-3 rounded-lg">
+          <option value="">Shared</option>
+          <option>Michael</option>
+          <option>Amber</option>
         </select>
         <button type="submit" class="bg-emerald-600 text-white px-5 py-3 rounded-lg">Add</button>
       </form>
@@ -111,16 +129,45 @@
         <input type="text" id="bill-name" placeholder="Bill name" class="border p-3 rounded-lg" required />
         <input type="number" step="0.01" id="bill-amount" placeholder="Amount" class="border p-3 rounded-lg" required />
         <input type="date" id="bill-due" class="border p-3 rounded-lg" required />
-        <input type="text" id="bill-who" placeholder="Who pays" class="border p-3 rounded-lg" />
+        <select id="bill-who" class="border p-3 rounded-lg">
+          <option>Michael</option>
+          <option>Amber</option>
+          <option>Shared</option>
+        </select>
         <button type="submit" class="bg-rose-600 text-white py-3 rounded-lg md:col-span-2 font-medium">Add Bill</button>
       </form>
       <div id="bills-list" class="space-y-3"></div>
+    </div>
+
+    <!-- Chores -->
+    <div id="chores" class="tab-content hidden">
+      <form id="chore-form" class="card p-5 mb-5 grid md:grid-cols-2 gap-3">
+        <input type="text" id="chore-title" placeholder="Chore or task" class="border p-3 rounded-lg" required />
+        <select id="chore-who" class="border p-3 rounded-lg">
+          <option>Michael</option>
+          <option>Amber</option>
+          <option>Both</option>
+        </select>
+        <select id="chore-freq" class="border p-3 rounded-lg">
+          <option value="once">One-time</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+        </select>
+        <input type="date" id="chore-due" class="border p-3 rounded-lg" />
+        <button type="submit" class="warm-bg py-3 rounded-lg md:col-span-2 font-medium">Add Chore</button>
+      </form>
+      <div id="chores-list" class="space-y-3"></div>
     </div>
 
     <!-- Notes -->
     <div id="notes" class="tab-content hidden">
       <form id="note-form" class="card p-5 mb-5 flex gap-2">
         <input type="text" id="note-text" placeholder="Something for us..." class="border p-3 rounded-lg flex-1" required />
+        <select id="note-who" class="border p-3 rounded-lg">
+          <option value="">Shared</option>
+          <option>Michael</option>
+          <option>Amber</option>
+        </select>
         <button type="submit" class="bg-violet-600 text-white px-5 py-3 rounded-lg">Add</button>
       </form>
       <div id="notes-list" class="space-y-2"></div>
@@ -132,7 +179,7 @@
         <div>
           <h3 class="font-semibold mb-3">Export Data</h3>
           <button onclick="exportData()" class="warm-bg px-5 py-2.5 rounded-lg text-sm font-medium">Download JSON</button>
-          <p class="text-xs text-gray-500 mt-2">Share this file with your partner to sync.</p>
+          <p class="text-xs text-gray-500 mt-2">Share this file with each other to sync.</p>
         </div>
         <div>
           <h3 class="font-semibold mb-3">Import Data</h3>
@@ -149,7 +196,7 @@
   </div>
 
   <script>
-    let data = { events: [], groceries: [], bills: [], notes: [] };
+    let data = { events: [], groceries: [], bills: [], chores: [], notes: [] };
 
     function simpleHash(str) {
       let hash = 0;
@@ -212,7 +259,11 @@
 
     function load() {
       const saved = localStorage.getItem('household-hub');
-      if (saved) data = JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        data = { ...data, ...parsed };
+        if (!data.chores) data.chores = [];
+      }
       renderAll();
     }
 
@@ -233,10 +284,22 @@
       renderEvents();
       renderGroceries();
       renderBills();
+      renderChores();
       renderNotes();
     }
 
+    function nameClass(name) {
+      if (name === 'Michael') return 'michael';
+      if (name === 'Amber') return 'amber';
+      return 'text-gray-400';
+    }
+
     function renderDashboard() {
+      const openChores = data.chores.filter(c => !c.done).slice(0, 5);
+      document.getElementById('dash-chores').innerHTML = openChores.length
+        ? openChores.map(c => `<div class="flex justify-between"><span>${c.title}</span><span class="${nameClass(c.who)} text-xs font-medium">${c.who}</span></div>`).join('')
+        : '<div class="text-gray-500">All caught up</div>';
+
       const upcoming = data.events
         .filter(e => new Date(e.date) >= new Date().setHours(0,0,0,0))
         .sort((a,b) => new Date(a.date) - new Date(b.date))
@@ -260,7 +323,7 @@
         <div class="card p-4 flex justify-between items-start">
           <div>
             <div class="font-medium">${e.title}</div>
-            <div class="text-sm text-gray-400 mt-1">${e.date} ${e.time || ''} ${e.who ? '· ' + e.who : ''}</div>
+            <div class="text-sm text-gray-400 mt-1">${e.date} ${e.time || ''} <span class="${nameClass(e.who)}">${e.who || 'Shared'}</span></div>
             ${e.notes ? `<div class="text-sm mt-2 text-gray-300">${e.notes}</div>` : ''}
           </div>
           <button onclick="deleteEvent(${i})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
@@ -272,7 +335,7 @@
       document.getElementById('groceries-list').innerHTML = data.groceries.map((g, i) => `
         <div class="card p-3 flex items-center gap-3 ${g.done ? 'opacity-40' : ''}">
           <input type="checkbox" ${g.done ? 'checked' : ''} onchange="toggleGrocery(${i})" class="accent-[#d4a574]" />
-          <span class="${g.done ? 'line-through text-gray-500' : ''}">${g.item} ${g.qty ? '<span class="text-gray-500">('+g.qty+')</span>' : ''} <span class="text-xs text-gray-600">[${g.cat}]</span></span>
+          <span class="${g.done ? 'line-through text-gray-500' : ''}">${g.item} ${g.qty ? '<span class="text-gray-500">('+g.qty+')</span>' : ''} <span class="text-xs text-gray-600">[${g.cat}]</span> <span class="${nameClass(g.who)} text-xs">${g.who || ''}</span></span>
           <button onclick="deleteGrocery(${i})" class="ml-auto text-gray-600 hover:text-rose-400 text-xs">✕</button>
         </div>
       `).join('') || '<p class="text-gray-500 text-center py-8">List is empty</p>';
@@ -284,7 +347,7 @@
         <div class="card p-4 flex justify-between items-center ${b.paid ? 'opacity-50' : ''}">
           <div>
             <div class="font-medium">${b.name} <span class="text-rose-400">$${b.amount}</span></div>
-            <div class="text-sm text-gray-400 mt-1">Due ${b.due} ${b.who ? '· ' + b.who : ''}</div>
+            <div class="text-sm text-gray-400 mt-1">Due ${b.due} <span class="${nameClass(b.who)}">${b.who}</span></div>
           </div>
           <div class="flex items-center gap-3">
             <label class="text-sm flex items-center gap-1.5"><input type="checkbox" ${b.paid ? 'checked' : ''} onchange="toggleBill(${i})" class="accent-[#d4a574]" /> Paid</label>
@@ -294,10 +357,30 @@
       `).join('') || '<p class="text-gray-500 text-center py-8">No bills</p>';
     }
 
+    function renderChores() {
+      const sorted = [...data.chores].sort((a,b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+      document.getElementById('chores-list').innerHTML = sorted.map((c, i) => `
+        <div class="card p-4 flex justify-between items-center ${c.done ? 'opacity-50' : ''}">
+          <div>
+            <div class="font-medium ${c.done ? 'line-through' : ''}">${c.title}</div>
+            <div class="text-sm text-gray-400 mt-1">
+              <span class="${nameClass(c.who)} font-medium">${c.who}</span>
+              · ${c.freq === 'once' ? 'One-time' : c.freq === 'daily' ? 'Daily' : 'Weekly'}
+              ${c.due ? ' · Due ' + c.due : ''}
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <label class="text-sm flex items-center gap-1.5"><input type="checkbox" ${c.done ? 'checked' : ''} onchange="toggleChore(${i})" class="accent-[#d4a574]" /> Done</label>
+            <button onclick="deleteChore(${i})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
+          </div>
+        </div>
+      `).join('') || '<p class="text-gray-500 text-center py-8">No chores yet</p>';
+    }
+
     function renderNotes() {
       document.getElementById('notes-list').innerHTML = data.notes.map((n, i) => `
         <div class="card p-3 flex items-center gap-3">
-          <span class="flex-1">${n}</span>
+          <span class="flex-1">${n.text || n} ${n.who ? `<span class="${nameClass(n.who)} text-xs ml-2">${n.who}</span>` : ''}</span>
           <button onclick="deleteNote(${i})" class="text-gray-600 hover:text-rose-400 text-xs">✕</button>
         </div>
       `).join('') || '<p class="text-gray-500 text-center py-8">No notes</p>';
@@ -322,6 +405,7 @@
         item: document.getElementById('grocery-item').value,
         qty: document.getElementById('grocery-qty').value,
         cat: document.getElementById('grocery-cat').value,
+        who: document.getElementById('grocery-who').value,
         done: false
       });
       e.target.reset();
@@ -341,9 +425,25 @@
       save();
     };
 
+    document.getElementById('chore-form').onsubmit = e => {
+      e.preventDefault();
+      data.chores.push({
+        title: document.getElementById('chore-title').value,
+        who: document.getElementById('chore-who').value,
+        freq: document.getElementById('chore-freq').value,
+        due: document.getElementById('chore-due').value,
+        done: false
+      });
+      e.target.reset();
+      save();
+    };
+
     document.getElementById('note-form').onsubmit = e => {
       e.preventDefault();
-      data.notes.push(document.getElementById('note-text').value);
+      data.notes.push({
+        text: document.getElementById('note-text').value,
+        who: document.getElementById('note-who').value
+      });
       e.target.reset();
       save();
     };
@@ -354,6 +454,8 @@
     function clearCompletedGroceries() { data.groceries = data.groceries.filter(g => !g.done); save(); }
     function toggleBill(i) { data.bills[i].paid = !data.bills[i].paid; save(); }
     function deleteBill(i) { data.bills.splice(i, 1); save(); }
+    function toggleChore(i) { data.chores[i].done = !data.chores[i].done; save(); }
+    function deleteChore(i) { data.chores.splice(i, 1); save(); }
     function deleteNote(i) { data.notes.splice(i, 1); save(); }
 
     function exportData() {
@@ -371,6 +473,7 @@
       reader.onload = e => {
         try {
           data = JSON.parse(e.target.result);
+          if (!data.chores) data.chores = [];
           save();
           alert('Imported');
         } catch { alert('Invalid file'); }
