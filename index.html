@@ -672,12 +672,38 @@
 
     function advanceRecurrence(bill) {
       if (!bill.recurrence || bill.recurrence === 'once') return;
-      const d = new Date(getNextDue(bill));
-      if (bill.recurrence === 'monthly') d.setMonth(d.getMonth() + 1);
-      else if (bill.recurrence === 'weekly') d.setDate(d.getDate() + 7);
-      else if (bill.recurrence === 'biweekly') d.setDate(d.getDate() + 14);
-      else if (bill.recurrence === 'yearly') d.setFullYear(d.getFullYear() + 1);
-      bill.nextDue = d.toISOString().slice(0, 10);
+      const nextStr = getNextDue(bill);
+      const [year, month, day] = nextStr.split('-').map(Number); // month is 1-based
+
+      let newYear = year;
+      let newMonth = month;
+      let newDay = day;
+
+      if (bill.recurrence === 'monthly') {
+        newMonth += 1;
+        if (newMonth > 12) {
+          newMonth = 1;
+          newYear += 1;
+        }
+      } else if (bill.recurrence === 'yearly') {
+        newYear += 1;
+      } else if (bill.recurrence === 'weekly' || bill.recurrence === 'biweekly') {
+        const addDays = bill.recurrence === 'weekly' ? 7 : 14;
+        const d = new Date(year, month - 1, day);
+        d.setDate(d.getDate() + addDays);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        bill.nextDue = `${y}-${m}-${dd}`;
+        bill.paid = false;
+        return;
+      }
+
+      // Clamp day for months with fewer days (e.g. Jan 31 → Feb 28/29)
+      const daysInTargetMonth = new Date(newYear, newMonth, 0).getDate();
+      if (newDay > daysInTargetMonth) newDay = daysInTargetMonth;
+
+      bill.nextDue = `${newYear}-${String(newMonth).padStart(2, '0')}-${String(newDay).padStart(2, '0')}`;
       bill.paid = false;
     }
 
