@@ -267,7 +267,8 @@
           <label class="text-sm text-gray-400">Color</label>
           <input type="color" id="bill-color" value="#f87171" class="w-12 h-10 rounded cursor-pointer border-0 bg-transparent" />
         </div>
-        <button type="submit" class="bg-rose-600 text-white py-3 rounded-lg md:col-span-2 font-medium">Add Bill</button>
+        <button type="submit" id="bill-submit" class="bg-rose-600 text-white py-3 rounded-lg md:col-span-2 font-medium">Add Bill</button>
+        <button type="button" id="bill-cancel" onclick="cancelEdit()" class="hidden bg-gray-700 text-white py-3 rounded-lg md:col-span-2 font-medium">Cancel Edit</button>
       </form>
 
       <div class="flex justify-between items-center mb-3 text-sm">
@@ -650,6 +651,7 @@
           </div>
           <div class="flex items-center gap-3">
             <label class="text-sm flex items-center gap-1.5"><input type="checkbox" ${b.paid ? 'checked' : ''} onchange="toggleBill(${realIdx})" class="accent-[#d4a574]" /> Paid</label>
+            <button onclick="editBill(${realIdx})" class="text-gray-400 hover:text-warm text-sm">Edit</button>
             <button onclick="deleteBill(${realIdx})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
           </div>
         </div>`;
@@ -770,10 +772,35 @@
 
     document.getElementById('event-form').onsubmit = e => { e.preventDefault(); data.events.push({ title: document.getElementById('event-title').value, date: document.getElementById('event-date').value, time: document.getElementById('event-time').value, who: document.getElementById('event-who').value, notes: document.getElementById('event-notes').value }); e.target.reset(); save(); showToast("Plan added"); };
     document.getElementById('grocery-form').onsubmit = e => { e.preventDefault(); data.groceries.push({ item: document.getElementById('grocery-item').value, qty: document.getElementById('grocery-qty').value, cat: document.getElementById('grocery-cat').value, who: document.getElementById('grocery-who').value, done: false }); e.target.reset(); save(); showToast("Item added"); };
+    let editingBillIndex = null;
+
+    function editBill(i) {
+      const bill = data.bills[i];
+      document.getElementById('bill-name').value = bill.name;
+      document.getElementById('bill-amount').value = bill.amount;
+      document.getElementById('bill-due').value = getNextDue(bill);
+      document.getElementById('bill-who').value = bill.who;
+      document.getElementById('bill-recurrence').value = bill.recurrence || 'once';
+      document.getElementById('bill-color').value = bill.color || '#f87171';
+      editingBillIndex = i;
+      document.getElementById('bill-submit').textContent = 'Update Bill';
+      document.getElementById('bill-cancel').classList.remove('hidden');
+      document.getElementById('bill-form').scrollIntoView({ behavior: 'smooth' });
+      showToast('Editing bill');
+    }
+
+    function cancelEdit() {
+      editingBillIndex = null;
+      document.getElementById('bill-form').reset();
+      document.getElementById('bill-color').value = '#f87171';
+      document.getElementById('bill-submit').textContent = 'Add Bill';
+      document.getElementById('bill-cancel').classList.add('hidden');
+    }
+
     document.getElementById('bill-form').onsubmit = e => {
       e.preventDefault();
       const due = document.getElementById('bill-due').value;
-      data.bills.push({
+      const billData = {
         name: document.getElementById('bill-name').value,
         amount: document.getElementById('bill-amount').value,
         due: due,
@@ -782,11 +809,22 @@
         recurrence: document.getElementById('bill-recurrence').value,
         color: document.getElementById('bill-color').value,
         paid: false
-      });
-      e.target.reset();
-      document.getElementById('bill-color').value = '#f87171';
+      };
+
+      if (editingBillIndex !== null) {
+        // Preserve paid status if it was already paid and not changing date much, or just reset
+        const old = data.bills[editingBillIndex];
+        billData.paid = old.paid;
+        data.bills[editingBillIndex] = billData;
+        showToast('Bill updated');
+        cancelEdit();
+      } else {
+        data.bills.push(billData);
+        showToast('Bill added');
+        e.target.reset();
+        document.getElementById('bill-color').value = '#f87171';
+      }
       save();
-      showToast("Bill added");
     };
     document.getElementById('chore-form').onsubmit = e => { e.preventDefault(); data.chores.push({ title: document.getElementById('chore-title').value, who: document.getElementById('chore-who').value, freq: document.getElementById('chore-freq').value, due: document.getElementById('chore-due').value, done: false }); e.target.reset(); save(); showToast("Chore added"); };
     document.getElementById('note-form').onsubmit = e => { e.preventDefault(); data.notes.push({ text: document.getElementById('note-text').value, who: document.getElementById('note-who').value }); e.target.reset(); save(); showToast("Note added"); };
