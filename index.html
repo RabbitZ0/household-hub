@@ -14,7 +14,7 @@
     #pin-overlay { position: fixed; inset: 0; background: radial-gradient(circle at center, #1a1d24 0%, #0a0c0f 100%); z-index: 100; display: flex; align-items: center; justify-content: center; }
     #pin-overlay.hidden { display: none !important; }
     .card { background: #1a1d24; border: 1px solid #2a2e36; border-radius: 16px; transition: all 0.2s; }
-    .card:hover { border-color: #3a3f4a; }
+    .card:hover { border-color: #3a3f4a; transform: translateY(-1px); }
     input, textarea, select { background: #12141a !important; border-color: #2a2e36 !important; color: #e8e6e3 !important; }
     input:focus, textarea:focus, select:focus { border-color: #d4a574 !important; outline: none; box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.2); }
     .warm { color: #d4a574; }
@@ -23,12 +23,16 @@
     .amber { color: #f9a8d4; }
     .overdue { color: #f87171; font-weight: 600; }
     .due-today { color: #fbbf24; }
+    #toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #1a1d24; border: 1px solid #d4a574; color: #e8e6e3; padding: 0.75rem 1.5rem; border-radius: 999px; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    #toast.show { opacity: 1; }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #0f1115; }
     ::-webkit-scrollbar-thumb { background: #2a2e36; border-radius: 3px; }
   </style>
 </head>
 <body>
+  <div id="toast"></div>
+
   <!-- PIN Overlay -->
   <div id="pin-overlay">
     <div class="text-center max-w-sm mx-4">
@@ -85,11 +89,11 @@
       </div>
       <div class="grid md:grid-cols-2 gap-5">
         <div class="card p-5">
-          <h3 class="font-semibold text-emerald-400 mb-3"><i class="fa-solid fa-basket-shopping mr-2"></i>Groceries</h3>
+          <h3 class="font-semibold text-emerald-400 mb-3"><i class="fa-solid fa-cart-shopping mr-2"></i>Groceries</h3>
           <div id="dash-groceries" class="text-sm text-gray-300"></div>
         </div>
         <div class="card p-5">
-          <h3 class="font-semibold text-rose-400 mb-3"><i class="fa-solid fa-receipt mr-2"></i>Bills</h3>
+          <h3 class="font-semibold text-rose-400 mb-3"><i class="fa-solid fa-file-invoice-dollar mr-2"></i>Bills</h3>
           <div id="dash-bills" class="text-sm text-gray-300"></div>
         </div>
       </div>
@@ -130,7 +134,7 @@
       <div class="flex justify-end mb-3">
         <button onclick="clearCompletedGroceries()" class="text-sm text-gray-500 hover:text-gray-300">Clear completed</button>
       </div>
-      <div id="groceries-list" class="space-y-2"></div>
+      <div id="groceries-list" class="space-y-4"></div>
     </div>
 
     <!-- Bills -->
@@ -183,27 +187,27 @@
       <div id="notes-list" class="space-y-2"></div>
     </div>
 
-    <!-- Data / Sync + Settings -->
+    <!-- Data / Sync -->
     <div id="data" class="tab-content hidden">
       <div class="card p-6 space-y-6">
         <div>
-          <h3 class="font-semibold mb-3">Weather Location</h3>
-          <input type="text" id="city-input" placeholder="City name (e.g. Austin)" class="border p-3 rounded-lg w-full mb-3" />
-          <button onclick="saveCity()" class="warm-bg px-5 py-2.5 rounded-lg text-sm font-medium">Save City</button>
-          <p class="text-xs text-gray-500 mt-2">Used for the weather card on the dashboard.</p>
-        </div>
-        <div class="border-t border-gray-800 pt-5">
-          <h3 class="font-semibold mb-3">Export Data</h3>
+          <h3 class="font-semibold mb-3"><i class="fa-solid fa-download mr-2"></i>Export Data</h3>
           <button onclick="exportData()" class="warm-bg px-5 py-2.5 rounded-lg text-sm font-medium">Download JSON</button>
           <p class="text-xs text-gray-500 mt-2">Share this file with each other to sync across devices.</p>
         </div>
         <div>
-          <h3 class="font-semibold mb-3">Import Data</h3>
+          <h3 class="font-semibold mb-3"><i class="fa-solid fa-upload mr-2"></i>Import Data</h3>
           <input type="file" id="import-file" accept=".json" class="mb-3 text-sm" />
           <button onclick="importData()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm">Import</button>
         </div>
         <div class="border-t border-gray-800 pt-5">
-          <h3 class="font-semibold mb-3">Change PIN</h3>
+          <h3 class="font-semibold mb-3"><i class="fa-solid fa-location-dot mr-2"></i>Weather Location</h3>
+          <input type="text" id="weather-location" placeholder="City name (e.g. Austin, TX)" class="border p-3 rounded-lg mb-3 w-full" />
+          <button onclick="saveLocation()" class="bg-sky-600 text-white px-5 py-2.5 rounded-lg text-sm">Save Location</button>
+          <p class="text-xs text-gray-500 mt-2">Used for the weather card on the Home tab.</p>
+        </div>
+        <div class="border-t border-gray-800 pt-5">
+          <h3 class="font-semibold mb-3"><i class="fa-solid fa-key mr-2"></i>Change PIN</h3>
           <input type="password" id="new-pin" maxlength="6" inputmode="numeric" placeholder="New 4-6 digit PIN" class="border p-3 rounded-lg mb-3 w-full" />
           <button onclick="changePin()" class="bg-gray-700 text-white px-5 py-2.5 rounded-lg text-sm">Update PIN</button>
         </div>
@@ -212,7 +216,14 @@
   </div>
 
   <script>
-    let data = { events: [], groceries: [], bills: [], chores: [], notes: [], city: "" };
+    let data = { events: [], groceries: [], bills: [], chores: [], notes: [], settings: { location: "" } };
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
 
     function simpleHash(str) {
       let hash = 0;
@@ -264,14 +275,20 @@
       document.getElementById('app').classList.remove('hidden');
       load();
       updateDate();
+      setInterval(updateDate, 60000);
+    }
+
+    function updateDate() {
+      const now = new Date();
+      document.getElementById('current-date').textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     }
 
     function changePin() {
       const newPin = document.getElementById('new-pin').value.trim();
-      if (newPin.length < 4) return alert("PIN must be at least 4 digits");
+      if (newPin.length < 4) return showToast("PIN must be at least 4 digits");
       localStorage.setItem('hh-pin', simpleHash(newPin));
       document.getElementById('new-pin').value = "";
-      alert("PIN updated");
+      showToast("PIN updated");
     }
 
     function load() {
@@ -280,11 +297,11 @@
         const parsed = JSON.parse(saved);
         data = { ...data, ...parsed };
         if (!data.chores) data.chores = [];
-        if (!data.city) data.city = "";
+        if (!data.settings) data.settings = { location: "" };
       }
-      document.getElementById('city-input').value = data.city || "";
+      document.getElementById('weather-location').value = data.settings.location || "";
       renderAll();
-      if (data.city) fetchWeather();
+      if (data.settings.location) fetchWeather();
     }
 
     function save() {
@@ -292,43 +309,32 @@
       renderAll();
     }
 
-    function saveCity() {
-      data.city = document.getElementById('city-input').value.trim();
+    function saveLocation() {
+      data.settings.location = document.getElementById('weather-location').value.trim();
       save();
-      if (data.city) fetchWeather();
-      alert("City saved");
-    }
-
-    function updateDate() {
-      const now = new Date();
-      document.getElementById('current-date').textContent = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+      showToast("Location saved");
+      if (data.settings.location) fetchWeather();
     }
 
     async function fetchWeather() {
-      if (!data.city) return;
+      const loc = data.settings.location;
+      if (!loc) return;
       try {
-        const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(data.city)}&count=1`).then(r => r.json());
-        if (!geo.results || !geo.results[0]) return;
-        const { latitude, longitude, name } = geo.results[0];
-        const weather = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`).then(r => r.json());
-        const temp = Math.round(weather.current.temperature_2m);
-        const code = weather.current.weather_code;
-        const desc = getWeatherDesc(code);
+        const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(loc)}&count=1`);
+        const geoData = await geo.json();
+        if (!geoData.results || !geoData.results[0]) return;
+        const { latitude, longitude, name } = geoData.results[0];
+        const weather = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`);
+        const w = await weather.json();
+        const temp = Math.round(w.current.temperature_2m);
+        const code = w.current.weather_code;
+        const icons = { 0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️", 45: "🌫️", 51: "🌦️", 61: "🌧️", 71: "🌨️", 80: "🌧️", 95: "⛈️" };
+        const icon = icons[code] || "🌡️";
+        document.getElementById('weather-content').innerHTML = `<div class="text-2xl mb-1">${icon} ${temp}°F</div><div class="text-gray-400">${name}</div>`;
         document.getElementById('weather-card').classList.remove('hidden');
-        document.getElementById('weather-content').innerHTML = `<i class="fa-solid fa-cloud-sun text-xl warm mr-2"></i> ${temp}°F · ${desc} in ${name}`;
       } catch (e) {
-        console.log("Weather failed", e);
+        console.log("Weather unavailable");
       }
-    }
-
-    function getWeatherDesc(code) {
-      if (code === 0) return "Clear";
-      if (code <= 3) return "Partly cloudy";
-      if (code <= 48) return "Foggy";
-      if (code <= 67) return "Rain";
-      if (code <= 77) return "Snow";
-      if (code <= 82) return "Showers";
-      return "Stormy";
     }
 
     function showTab(tab) {
@@ -353,35 +359,49 @@
       return 'text-gray-400';
     }
 
-    function dateStatus(dateStr) {
-      if (!dateStr) return "";
-      const today = new Date().toISOString().split('T')[0];
-      if (dateStr < today) return "overdue";
-      if (dateStr === today) return "due-today";
-      return "";
+    function isOverdue(dateStr) {
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      return d < today;
+    }
+
+    function isToday(dateStr) {
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      const today = new Date();
+      return d.toDateString() === today.toDateString();
+    }
+
+    function dateClass(dateStr) {
+      if (isOverdue(dateStr)) return 'overdue';
+      if (isToday(dateStr)) return 'due-today';
+      return '';
     }
 
     function renderDashboard() {
       const openChores = data.chores.filter(c => !c.done).slice(0, 5);
       document.getElementById('dash-chores').innerHTML = openChores.length
         ? openChores.map(c => `<div class="flex justify-between"><span>${c.title}</span><span class="${nameClass(c.who)} text-xs font-medium">${c.who}</span></div>`).join('')
-        : '<div class="text-gray-500"><i class="fa-solid fa-check text-emerald-500 mr-1"></i> All caught up</div>';
+        : '<div class="text-gray-500">All caught up ✨</div>';
 
       const upcoming = data.events
         .filter(e => new Date(e.date) >= new Date().setHours(0,0,0,0))
         .sort((a,b) => new Date(a.date) - new Date(b.date))
         .slice(0, 4);
       document.getElementById('dash-events').innerHTML = upcoming.length
-        ? upcoming.map(e => `<div class="flex justify-between"><span>${e.title}</span><span class="text-gray-500 text-xs">${e.date}</span></div>`).join('')
+        ? upcoming.map(e => `<div class="flex justify-between"><span>${e.title}</span><span class="text-gray-500 text-xs ${dateClass(e.date)}">${e.date}</span></div>`).join('')
         : '<div class="text-gray-500">Nothing planned</div>';
 
       const openG = data.groceries.filter(g => !g.done).length;
-      document.getElementById('dash-groceries').innerHTML = openG ? `<span class="text-2xl font-semibold">${openG}</span> <span class="text-gray-500">left</span>` : '<span class="text-emerald-400"><i class="fa-solid fa-check mr-1"></i> All done</span>';
+      document.getElementById('dash-groceries').innerHTML = openG ? `<span class="text-2xl font-semibold">${openG}</span> <span class="text-gray-500">items left</span>` : '<span class="text-emerald-400">All done 🎉</span>';
 
       const unpaid = data.bills.filter(b => !b.paid);
+      const total = unpaid.reduce((sum, b) => sum + parseFloat(b.amount || 0), 0);
       document.getElementById('dash-bills').innerHTML = unpaid.length
-        ? unpaid.map(b => `<div class="flex justify-between"><span>${b.name}</span><span class="text-rose-400">$${b.amount}</span></div>`).join('')
-        : '<div class="text-gray-500">All paid</div>';
+        ? `<div class="mb-2"><span class="text-2xl font-semibold">$${total.toFixed(2)}</span> <span class="text-gray-500">due</span></div>` + unpaid.slice(0,3).map(b => `<div class="flex justify-between text-xs"><span>${b.name}</span><span class="${dateClass(b.due)}">$${b.amount}</span></div>`).join('')
+        : '<div class="text-gray-500">All paid ✓</div>';
     }
 
     function renderEvents() {
@@ -390,71 +410,99 @@
         <div class="card p-4 flex justify-between items-start">
           <div>
             <div class="font-medium">${e.title}</div>
-            <div class="text-sm text-gray-400 mt-1">${e.date} ${e.time || ''} <span class="${nameClass(e.who)}">${e.who || 'Shared'}</span></div>
+            <div class="text-sm text-gray-400 mt-1"><span class="${dateClass(e.date)}">${e.date}</span> ${e.time || ''} <span class="${nameClass(e.who)}">${e.who || 'Shared'}</span></div>
             ${e.notes ? `<div class="text-sm mt-2 text-gray-300">${e.notes}</div>` : ''}
           </div>
-          <button onclick="if(confirm('Delete this plan?')) deleteEvent(${i})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
+          <button onclick="deleteEvent(${i})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
         </div>
-      `).join('') || '<p class="text-gray-500 text-center py-8"><i class="fa-regular fa-calendar text-2xl block mb-2"></i>No plans yet</p>';
+      `).join('') || '<p class="text-gray-500 text-center py-8">No plans yet</p>';
     }
 
     function renderGroceries() {
-      document.getElementById('groceries-list').innerHTML = data.groceries.map((g, i) => `
-        <div class="card p-3 flex items-center gap-3 ${g.done ? 'opacity-40' : ''}">
-          <input type="checkbox" ${g.done ? 'checked' : ''} onchange="toggleGrocery(${i})" class="accent-[#d4a574]" />
-          <span class="${g.done ? 'line-through text-gray-500' : ''}">${g.item} ${g.qty ? '<span class="text-gray-500">('+g.qty+')</span>' : ''} <span class="text-xs text-gray-600">[${g.cat}]</span> <span class="${nameClass(g.who)} text-xs">${g.who || ''}</span></span>
-          <button onclick="if(confirm('Remove item?')) deleteGrocery(${i})" class="ml-auto text-gray-600 hover:text-rose-400 text-xs">✕</button>
-        </div>
-      `).join('') || '<p class="text-gray-500 text-center py-8"><i class="fa-solid fa-basket-shopping text-2xl block mb-2"></i>List is empty</p>';
+      const open = data.groceries.filter(g => !g.done);
+      const byCat = {};
+      open.forEach(g => {
+        const cat = g.cat || 'Other';
+        if (!byCat[cat]) byCat[cat] = [];
+        byCat[cat].push(g);
+      });
+      const done = data.groceries.filter(g => g.done);
+
+      let html = '';
+      Object.keys(byCat).sort().forEach(cat => {
+        html += `<div><h4 class="text-xs uppercase tracking-wider text-gray-500 mb-2">${cat}</h4>`;
+        html += byCat[cat].map(g => {
+          const idx = data.groceries.indexOf(g);
+          return `
+            <div class="card p-3 flex items-center gap-3 mb-2">
+              <input type="checkbox" onchange="toggleGrocery(${idx})" class="accent-[#d4a574]" />
+              <span>${g.item} ${g.qty ? '<span class="text-gray-500">('+g.qty+')</span>' : ''} <span class="${nameClass(g.who)} text-xs">${g.who || ''}</span></span>
+              <button onclick="deleteGrocery(${idx})" class="ml-auto text-gray-600 hover:text-rose-400 text-xs">✕</button>
+            </div>`;
+        }).join('');
+        html += '</div>';
+      });
+
+      if (done.length) {
+        html += `<div class="mt-6"><h4 class="text-xs uppercase tracking-wider text-gray-600 mb-2">Completed</h4>`;
+        html += done.map(g => {
+          const idx = data.groceries.indexOf(g);
+          return `
+            <div class="card p-3 flex items-center gap-3 mb-2 opacity-40">
+              <input type="checkbox" checked onchange="toggleGrocery(${idx})" class="accent-[#d4a574]" />
+              <span class="line-through">${g.item}</span>
+              <button onclick="deleteGrocery(${idx})" class="ml-auto text-gray-600 hover:text-rose-400 text-xs">✕</button>
+            </div>`;
+        }).join('');
+        html += '</div>';
+      }
+
+      document.getElementById('groceries-list').innerHTML = html || '<p class="text-gray-500 text-center py-8">List is empty</p>';
     }
 
     function renderBills() {
       const sorted = [...data.bills].sort((a,b) => new Date(a.due) - new Date(b.due));
-      document.getElementById('bills-list').innerHTML = sorted.map((b, i) => {
-        const status = dateStatus(b.due);
-        return `
+      document.getElementById('bills-list').innerHTML = sorted.map((b, i) => `
         <div class="card p-4 flex justify-between items-center ${b.paid ? 'opacity-50' : ''}">
           <div>
             <div class="font-medium">${b.name} <span class="text-rose-400">$${b.amount}</span></div>
-            <div class="text-sm mt-1 ${status}">Due ${b.due} <span class="${nameClass(b.who)}">${b.who}</span></div>
+            <div class="text-sm text-gray-400 mt-1">Due <span class="${dateClass(b.due)}">${b.due}</span> <span class="${nameClass(b.who)}">${b.who}</span></div>
           </div>
           <div class="flex items-center gap-3">
             <label class="text-sm flex items-center gap-1.5"><input type="checkbox" ${b.paid ? 'checked' : ''} onchange="toggleBill(${i})" class="accent-[#d4a574]" /> Paid</label>
-            <button onclick="if(confirm('Delete this bill?')) deleteBill(${i})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
+            <button onclick="deleteBill(${i})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
           </div>
-        </div>`;
-      }).join('') || '<p class="text-gray-500 text-center py-8">No bills</p>';
+        </div>
+      `).join('') || '<p class="text-gray-500 text-center py-8">No bills</p>';
     }
 
     function renderChores() {
       const sorted = [...data.chores].sort((a,b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
-      document.getElementById('chores-list').innerHTML = sorted.map((c, i) => {
-        const status = dateStatus(c.due);
-        return `
+      document.getElementById('chores-list').innerHTML = sorted.map((c, i) => `
         <div class="card p-4 flex justify-between items-center ${c.done ? 'opacity-50' : ''}">
           <div>
             <div class="font-medium ${c.done ? 'line-through' : ''}">${c.title}</div>
             <div class="text-sm text-gray-400 mt-1">
               <span class="${nameClass(c.who)} font-medium">${c.who}</span>
               · ${c.freq === 'once' ? 'One-time' : c.freq === 'daily' ? 'Daily' : 'Weekly'}
-              ${c.due ? ` · <span class="${status}">Due ${c.due}</span>` : ''}
+              ${c.due ? ' · Due <span class="' + dateClass(c.due) + '">' + c.due + '</span>' : ''}
             </div>
           </div>
           <div class="flex items-center gap-3">
             <label class="text-sm flex items-center gap-1.5"><input type="checkbox" ${c.done ? 'checked' : ''} onchange="toggleChore(${i})" class="accent-[#d4a574]" /> Done</label>
-            <button onclick="if(confirm('Delete this chore?')) deleteChore(${i})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
+            <button onclick="deleteChore(${i})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
           </div>
-        </div>`;
-      }).join('') || '<p class="text-gray-500 text-center py-8"><i class="fa-solid fa-check-double text-2xl block mb-2"></i>No chores yet</p>';
+        </div>
+      `).join('') || '<p class="text-gray-500 text-center py-8">No chores yet</p>';
     }
 
     function renderNotes() {
       document.getElementById('notes-list').innerHTML = data.notes.map((n, i) => `
         <div class="card p-3 flex items-center gap-3">
           <span class="flex-1">${n.text || n} ${n.who ? `<span class="${nameClass(n.who)} text-xs ml-2">${n.who}</span>` : ''}</span>
-          <button onclick="if(confirm('Delete note?')) deleteNote(${i})" class="text-gray-600 hover:text-rose-400 text-xs">✕</button>
+          <button onclick="deleteNote(${i})" class="text-gray-600 hover:text-rose-400 text-xs">✕</button>
         </div>
-      `).join('') || '<p class="text-gray-500 text-center py-8"><i class="fa-regular fa-note-sticky text-2xl block mb-2"></i>No notes</p>';
+      `).join('') || '<p class="text-gray-500 text-center py-8">No notes</p>';
     }
 
     document.getElementById('event-form').onsubmit = e => {
@@ -468,6 +516,7 @@
       });
       e.target.reset();
       save();
+      showToast("Plan added");
     };
 
     document.getElementById('grocery-form').onsubmit = e => {
@@ -481,6 +530,7 @@
       });
       e.target.reset();
       save();
+      showToast("Item added");
     };
 
     document.getElementById('bill-form').onsubmit = e => {
@@ -494,6 +544,7 @@
       });
       e.target.reset();
       save();
+      showToast("Bill added");
     };
 
     document.getElementById('chore-form').onsubmit = e => {
@@ -507,6 +558,7 @@
       });
       e.target.reset();
       save();
+      showToast("Chore added");
     };
 
     document.getElementById('note-form').onsubmit = e => {
@@ -517,39 +569,41 @@
       });
       e.target.reset();
       save();
+      showToast("Note added");
     };
 
-    function deleteEvent(i) { data.events.splice(i, 1); save(); }
+    function deleteEvent(i) { if(confirm('Delete this plan?')) { data.events.splice(i, 1); save(); } }
     function toggleGrocery(i) { data.groceries[i].done = !data.groceries[i].done; save(); }
     function deleteGrocery(i) { data.groceries.splice(i, 1); save(); }
-    function clearCompletedGroceries() { data.groceries = data.groceries.filter(g => !g.done); save(); }
+    function clearCompletedGroceries() { data.groceries = data.groceries.filter(g => !g.done); save(); showToast("Completed items cleared"); }
     function toggleBill(i) { data.bills[i].paid = !data.bills[i].paid; save(); }
-    function deleteBill(i) { data.bills.splice(i, 1); save(); }
+    function deleteBill(i) { if(confirm('Delete this bill?')) { data.bills.splice(i, 1); save(); } }
     function toggleChore(i) { data.chores[i].done = !data.chores[i].done; save(); }
-    function deleteChore(i) { data.chores.splice(i, 1); save(); }
+    function deleteChore(i) { if(confirm('Delete this chore?')) { data.chores.splice(i, 1); save(); } }
     function deleteNote(i) { data.notes.splice(i, 1); save(); }
 
     function exportData() {
       const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'our-home-data.json';
+      a.download = `our-home-data-${new Date().toISOString().slice(0,10)}.json`;
       a.click();
+      showToast("Data exported");
     }
 
     function importData() {
       const file = document.getElementById('import-file').files[0];
-      if (!file) return alert('Choose a file first');
+      if (!file) return showToast('Choose a file first');
       const reader = new FileReader();
       reader.onload = e => {
         try {
           data = JSON.parse(e.target.result);
           if (!data.chores) data.chores = [];
-          if (!data.city) data.city = "";
+          if (!data.settings) data.settings = { location: "" };
           save();
-          alert('Imported successfully');
-          if (data.city) fetchWeather();
-        } catch { alert('Invalid file'); }
+          showToast('Imported successfully');
+          if (data.settings.location) fetchWeather();
+        } catch { showToast('Invalid file'); }
       };
       reader.readAsText(file);
     }
