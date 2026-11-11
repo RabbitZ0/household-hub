@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Household Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; }
+    .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; }
+    #pin-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
+    #pin-overlay.hidden { display: none !important; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <!-- PIN Overlay -->
+  <div id="pin-overlay">
+    <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full mx-4 text-center">
+      <h2 id="pin-title" class="text-2xl font-bold text-blue-600 mb-2">Household Hub</h2>
+      <p id="pin-subtitle" class="text-gray-500 mb-6">Enter your shared PIN</p>
+      <input type="password" id="pin-input" maxlength="6" inputmode="numeric" placeholder="••••" 
+             class="w-full text-center text-3xl tracking-widest border-2 border-gray-200 rounded-lg p-3 mb-4 focus:border-blue-500 outline-none" />
+      <button onclick="submitPin()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium">Unlock</button>
+      <p id="pin-error" class="text-red-500 text-sm mt-3 hidden"></p>
+    </div>
+  </div>
+
+  <div id="app" class="max-w-4xl mx-auto p-4 pb-20 hidden">
+    <header class="mb-6 text-center">
+      <h1 class="text-3xl font-bold text-blue-600 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-house-heart"></i> Household Hub
+      </h1>
+      <p class="text-sm text-gray-500 mt-1">Shared planning for two</p>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="flex border-b mb-6 overflow-x-auto">
+      <button onclick="showTab('dashboard')" class="tab px-4 py-2 font-medium tab-active" data-tab="dashboard">Dashboard</button>
+      <button onclick="showTab('events')" class="tab px-4 py-2 font-medium" data-tab="events">Events</button>
+      <button onclick="showTab('groceries')" class="tab px-4 py-2 font-medium" data-tab="groceries">Groceries</button>
+      <button onclick="showTab('bills')" class="tab px-4 py-2 font-medium" data-tab="bills">Bills</button>
+      <button onclick="showTab('notes')" class="tab px-4 py-2 font-medium" data-tab="notes">Notes</button>
+      <button onclick="showTab('data')" class="tab px-4 py-2 font-medium" data-tab="data">Sync</button>
+    </nav>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="tab-content">
+      <div class="grid md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-lg shadow">
+          <h3 class="font-semibold text-blue-600 mb-2"><i class="fa-solid fa-calendar"></i> Upcoming Events</h3>
+          <div id="dash-events" class="text-sm space-y-1"></div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+          <h3 class="font-semibold text-green-600 mb-2"><i class="fa-solid fa-cart-shopping"></i> Grocery Items</h3>
+          <div id="dash-groceries" class="text-sm"></div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+          <h3 class="font-semibold text-red-600 mb-2"><i class="fa-solid fa-file-invoice-dollar"></i> Unpaid Bills</h3>
+          <div id="dash-bills" class="text-sm"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Events -->
+    <div id="events" class="tab-content hidden">
+      <form id="event-form" class="bg-white p-4 rounded-lg shadow mb-4 grid md:grid-cols-2 gap-3">
+        <input type="text" id="event-title" placeholder="Event title" class="border p-2 rounded" required />
+        <input type="date" id="event-date" class="border p-2 rounded" required />
+        <input type="time" id="event-time" class="border p-2 rounded" />
+        <input type="text" id="event-who" placeholder="Who (optional)" class="border p-2 rounded" />
+        <textarea id="event-notes" placeholder="Notes" class="border p-2 rounded md:col-span-2" rows="2"></textarea>
+        <button type="submit" class="bg-blue-600 text-white py-2 rounded md:col-span-2">Add Event</button>
+      </form>
+      <div id="events-list" class="space-y-2"></div>
+    </div>
+
+    <!-- Groceries -->
+    <div id="groceries" class="tab-content hidden">
+      <form id="grocery-form" class="bg-white p-4 rounded-lg shadow mb-4 flex flex-wrap gap-2">
+        <input type="text" id="grocery-item" placeholder="Item" class="border p-2 rounded flex-1 min-w-[150px]" required />
+        <input type="text" id="grocery-qty" placeholder="Qty" class="border p-2 rounded w-20" />
+        <select id="grocery-cat" class="border p-2 rounded">
+          <option>Produce</option><option>Dairy</option><option>Meat</option><option>Pantry</option><option>Frozen</option><option>Other</option>
+        </select>
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Add</button>
+      </form>
+      <div class="flex justify-between mb-2">
+        <button onclick="clearCompletedGroceries()" class="text-sm text-gray-500 underline">Clear completed</button>
+      </div>
+      <div id="groceries-list" class="space-y-1"></div>
+    </div>
+
+    <!-- Bills -->
+    <div id="bills" class="tab-content hidden">
+      <form id="bill-form" class="bg-white p-4 rounded-lg shadow mb-4 grid md:grid-cols-2 gap-3">
+        <input type="text" id="bill-name" placeholder="Bill name" class="border p-2 rounded" required />
+        <input type="number" step="0.01" id="bill-amount" placeholder="Amount" class="border p-2 rounded" required />
+        <input type="date" id="bill-due" class="border p-2 rounded" required />
+        <input type="text" id="bill-who" placeholder="Who pays" class="border p-2 rounded" />
+        <button type="submit" class="bg-red-600 text-white py-2 rounded md:col-span-2">Add Bill</button>
+      </form>
+      <div id="bills-list" class="space-y-2"></div>
+    </div>
+
+    <!-- Notes -->
+    <div id="notes" class="tab-content hidden">
+      <form id="note-form" class="bg-white p-4 rounded-lg shadow mb-4 flex gap-2">
+        <input type="text" id="note-text" placeholder="New note or to-do" class="border p-2 rounded flex-1" required />
+        <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded">Add</button>
+      </form>
+      <div id="notes-list" class="space-y-1"></div>
+    </div>
+
+    <!-- Data / Sync -->
+    <div id="data" class="tab-content hidden">
+      <div class="bg-white p-4 rounded-lg shadow space-y-6">
+        <div>
+          <h3 class="font-semibold mb-2">Export Data</h3>
+          <button onclick="exportData()" class="bg-blue-600 text-white px-4 py-2 rounded">Download JSON</button>
+          <p class="text-xs text-gray-500 mt-1">Share this file with your partner to sync.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-2">Import Data</h3>
+          <input type="file" id="import-file" accept=".json" class="mb-2" />
+          <button onclick="importData()" class="bg-green-600 text-white px-4 py-2 rounded">Import</button>
+          <p class="text-xs text-gray-500 mt-1">This will replace current data with the imported file.</p>
+        </div>
+        <div class="border-t pt-4">
+          <h3 class="font-semibold mb-2">Change PIN</h3>
+          <input type="password" id="new-pin" maxlength="6" inputmode="numeric" placeholder="New 4-6 digit PIN" class="border p-2 rounded mb-2 w-full" />
+          <button onclick="changePin()" class="bg-gray-700 text-white px-4 py-2 rounded">Update PIN</button>
+        </div>
+        <div class="text-xs text-gray-400">
+          Tip: For true live sync across devices, we can later connect a free Firebase backend. Let me know if you want that.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let data = { events: [], groceries: [], bills: [], notes: [] };
+    let currentPin = null;
+
+    function simpleHash(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      return hash.toString();
+    }
+
+    function initPin() {
+      const stored = localStorage.getItem('hh-pin');
+      const overlay = document.getElementById('pin-overlay');
+      const title = document.getElementById('pin-title');
+      const subtitle = document.getElementById('pin-subtitle');
+      const input = document.getElementById('pin-input');
+
+      if (!stored) {
+        title.textContent = "Set Shared PIN";
+        subtitle.textContent = "Choose a 4–6 digit PIN both of you will use";
+        input.placeholder = "Create PIN";
+        overlay.classList.remove('hidden');
+      } else {
+        currentPin = stored;
+        overlay.classList.remove('hidden');
+      }
+    }
+
+    function submitPin() {
+      const input = document.getElementById('pin-input');
+      const entered = input.value.trim();
+      const error = document.getElementById('pin-error');
+      const stored = localStorage.getItem('hh-pin');
+
+      if (entered.length < 4) {
+        error.textContent = "PIN must be at least 4 digits";
+        error.classList.remove('hidden');
+        return;
+      }
+
+      if (!stored) {
+        // First-time setup
+        localStorage.setItem('hh-pin', simpleHash(entered));
+        unlockApp();
+      } else if (simpleHash(entered) === stored) {
+        unlockApp();
+      } else {
+        error.textContent = "Incorrect PIN";
+        error.classList.remove('hidden');
+        input.value = "";
+        input.focus();
+      }
+    }
+
+    function unlockApp() {
+      const overlay = document.getElementById('pin-overlay');
+      overlay.classList.add('hidden');
+      overlay.style.display = 'none';
+      document.getElementById('app').classList.remove('hidden');
+      load();
+    }
+
+    function changePin() {
+      const newPin = document.getElementById('new-pin').value.trim();
+      if (newPin.length < 4) return alert("PIN must be at least 4 digits");
+      localStorage.setItem('hh-pin', simpleHash(newPin));
+      document.getElementById('new-pin').value = "";
+      alert("PIN updated successfully");
+    }
+
+    function load() {
+      const saved = localStorage.getItem('household-hub');
+      if (saved) data = JSON.parse(saved);
+      renderAll();
+    }
+
+    function save() {
+      localStorage.setItem('household-hub', JSON.stringify(data));
+      renderAll();
+    }
+
+    function showTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(tab).classList.remove('hidden');
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('tab-active'));
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('tab-active');
+    }
+
+    function renderAll() {
+      renderDashboard();
+      renderEvents();
+      renderGroceries();
+      renderBills();
+      renderNotes();
+    }
+
+    function renderDashboard() {
+      const upcoming = data.events
+        .filter(e => new Date(e.date) >= new Date().setHours(0,0,0,0))
+        .sort((a,b) => new Date(a.date) - new Date(b.date))
+        .slice(0, 4);
+      document.getElementById('dash-events').innerHTML = upcoming.length
+        ? upcoming.map(e => `<div>• ${e.title} <span class="text-gray-400">${e.date}</span></div>`).join('')
+        : '<div class="text-gray-400">None</div>';
+
+      const openG = data.groceries.filter(g => !g.done).length;
+      document.getElementById('dash-groceries').innerHTML = openG ? `${openG} item${openG>1?'s':''} left` : 'All done!';
+
+      const unpaid = data.bills.filter(b => !b.paid);
+      document.getElementById('dash-bills').innerHTML = unpaid.length
+        ? unpaid.map(b => `<div>• ${b.name} ($${b.amount})</div>`).join('')
+        : '<div class="text-gray-400">All paid</div>';
+    }
+
+    function renderEvents() {
+      const sorted = [...data.events].sort((a,b) => new Date(a.date) - new Date(b.date));
+      document.getElementById('events-list').innerHTML = sorted.map((e, i) => `
+        <div class="bg-white p-3 rounded shadow flex justify-between items-start">
+          <div>
+            <div class="font-medium">${e.title}</div>
+            <div class="text-sm text-gray-500">${e.date} ${e.time || ''} ${e.who ? '• ' + e.who : ''}</div>
+            ${e.notes ? `<div class="text-sm mt-1">${e.notes}</div>` : ''}
+          </div>
+          <button onclick="deleteEvent(${i})" class="text-red-500 text-sm">Delete</button>
+        </div>
+      `).join('') || '<p class="text-gray-400">No events yet</p>';
+    }
+
+    function renderGroceries() {
+      document.getElementById('groceries-list').innerHTML = data.groceries.map((g, i) => `
+        <div class="flex items-center gap-2 bg-white p-2 rounded ${g.done ? 'opacity-50' : ''}">
+          <input type="checkbox" ${g.done ? 'checked' : ''} onchange="toggleGrocery(${i})" />
+          <span class="${g.done ? 'line-through' : ''}">${g.item} ${g.qty ? '('+g.qty+')' : ''} <span class="text-xs text-gray-400">[${g.cat}]</span></span>
+          <button onclick="deleteGrocery(${i})" class="ml-auto text-red-400 text-xs">✕</button>
+        </div>
+      `).join('') || '<p class="text-gray-400">List is empty</p>';
+    }
+
+    function renderBills() {
+      const sorted = [...data.bills].sort((a,b) => new Date(a.due) - new Date(b.due));
+      document.getElementById('bills-list').innerHTML = sorted.map((b, i) => `
+        <div class="bg-white p-3 rounded shadow flex justify-between items-center ${b.paid ? 'opacity-60' : ''}">
+          <div>
+            <div class="font-medium">${b.name} <span class="text-sm">$${b.amount}</span></div>
+            <div class="text-sm text-gray-500">Due ${b.due} ${b.who ? '• ' + b.who : ''}</div>
+          </div>
+          <div class="flex gap-2 items-center">
+            <label class="text-sm"><input type="checkbox" ${b.paid ? 'checked' : ''} onchange="toggleBill(${i})" /> Paid</label>
+            <button onclick="deleteBill(${i})" class="text-red-500 text-sm">Delete</button>
+          </div>
+        </div>
+      `).join('') || '<p class="text-gray-400">No bills</p>';
+    }
+
+    function renderNotes() {
+      document.getElementById('notes-list').innerHTML = data.notes.map((n, i) => `
+        <div class="flex items-center gap-2 bg-white p-2 rounded">
+          <span class="flex-1">${n}</span>
+          <button onclick="deleteNote(${i})" class="text-red-400 text-xs">✕</button>
+        </div>
+      `).join('') || '<p class="text-gray-400">No notes</p>';
+    }
+
+    // Forms
+    document.getElementById('event-form').onsubmit = e => {
+      e.preventDefault();
+      data.events.push({
+        title: document.getElementById('event-title').value,
+        date: document.getElementById('event-date').value,
+        time: document.getElementById('event-time').value,
+        who: document.getElementById('event-who').value,
+        notes: document.getElementById('event-notes').value
+      });
+      e.target.reset();
+      save();
+    };
+
+    document.getElementById('grocery-form').onsubmit = e => {
+      e.preventDefault();
+      data.groceries.push({
+        item: document.getElementById('grocery-item').value,
+        qty: document.getElementById('grocery-qty').value,
+        cat: document.getElementById('grocery-cat').value,
+        done: false
+      });
+      e.target.reset();
+      save();
+    };
+
+    document.getElementById('bill-form').onsubmit = e => {
+      e.preventDefault();
+      data.bills.push({
+        name: document.getElementById('bill-name').value,
+        amount: document.getElementById('bill-amount').value,
+        due: document.getElementById('bill-due').value,
+        who: document.getElementById('bill-who').value,
+        paid: false
+      });
+      e.target.reset();
+      save();
+    };
+
+    document.getElementById('note-form').onsubmit = e => {
+      e.preventDefault();
+      data.notes.push(document.getElementById('note-text').value);
+      e.target.reset();
+      save();
+    };
+
+    function deleteEvent(i) { data.events.splice(i, 1); save(); }
+    function toggleGrocery(i) { data.groceries[i].done = !data.groceries[i].done; save(); }
+    function deleteGrocery(i) { data.groceries.splice(i, 1); save(); }
+    function clearCompletedGroceries() { data.groceries = data.groceries.filter(g => !g.done); save(); }
+    function toggleBill(i) { data.bills[i].paid = !data.bills[i].paid; save(); }
+    function deleteBill(i) { data.bills.splice(i, 1); save(); }
+    function deleteNote(i) { data.notes.splice(i, 1); save(); }
+
+    function exportData() {
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'household-hub-data.json';
+      a.click();
+    }
+
+    function importData() {
+      const file = document.getElementById('import-file').files[0];
+      if (!file) return alert('Choose a file first');
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          data = JSON.parse(e.target.result);
+          save();
+          alert('Imported successfully!');
+        } catch { alert('Invalid file'); }
+      };
+      reader.readAsText(file);
+    }
+
+    // Enter key on PIN
+    document.getElementById('pin-input').addEventListener('keypress', e => {
+      if (e.key === 'Enter') submitPin();
+    });
+
+    initPin();
+  </script>
+</body>
+</html>
