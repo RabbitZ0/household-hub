@@ -26,11 +26,54 @@
       content: '';
       position: fixed;
       inset: 0;
-      background: linear-gradient(180deg, rgba(15,17,21,0.85) 0%, rgba(15,17,21,0.92) 100%);
+      background: 
+        radial-gradient(ellipse at top, rgba(212,165,116,0.08) 0%, transparent 50%),
+        linear-gradient(180deg, rgba(15,17,21,0.82) 0%, rgba(15,17,21,0.94) 100%);
       z-index: -1;
     }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.5;
+    }
     .serif { font-family: 'Playfair Display', serif; }
-    .tab-active { border-bottom: 3px solid #d4a574; color: #d4a574; }
+    .tab-active { 
+      border-bottom: 3px solid #d4a574; 
+      color: #d4a574; 
+      text-shadow: 0 0 12px rgba(212,165,116,0.4);
+    }
+    .card {
+      background: rgba(26, 29, 36, 0.65);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 18px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    .card:hover { border-color: rgba(212,165,116,0.25); }
+    .card:active { transform: scale(0.985); }
+    button.primary, .warm-bg, #quick-add {
+      box-shadow: 0 4px 16px rgba(212,165,116,0.35);
+    }
+    button.primary:active, .warm-bg:active, #quick-add:active { transform: scale(0.96); }
+    .empty-state { text-align: center; padding: 2rem 1rem; color: #6b7280; }
+    .empty-state i { font-size: 1.75rem; opacity: 0.6; margin-bottom: 0.5rem; display: block; }
+    .progress-bar { height: 4px; background: #1f2937; border-radius: 2px; overflow: hidden; margin-bottom: 0.75rem; }
+    .progress-bar > div { height: 100%; background: #d4a574; border-radius: 2px; transition: width 0.4s ease; }
+    #current-date { font-family: 'Playfair Display', serif; font-size: 0.85rem; color: #9ca3af; }
+    .section-title { position: relative; padding-left: 0.75rem; }
+    .section-title::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0.2em; bottom: 0.2em;
+      width: 3px;
+      border-radius: 2px;
+      background: currentColor;
+    }
     #pin-overlay {
       position: fixed; inset: 0;
       background: radial-gradient(circle at center, #1a1d24 0%, #0a0c0f 100%);
@@ -38,18 +81,6 @@
       animation: fadeIn 0.6s ease;
     }
     #pin-overlay.hidden { display: none !important; }
-    .card {
-      background: rgba(26, 29, 36, 0.75);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(42, 46, 54, 0.8);
-      border-radius: 16px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .card:hover {
-      border-color: #3a3f4a;
-      transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
     input, textarea, select {
       background: rgba(18, 20, 26, 0.8) !important;
       border-color: #2a2e36 !important;
@@ -114,7 +145,14 @@
         gap: 2px;
       }
       nav button i { font-size: 1.1rem; margin: 0; }
-      .tab-active { border-bottom: none; border-top: 3px solid #d4a574; }
+      .tab-active { 
+        border-bottom: none; 
+        border-top: none;
+        background: rgba(212,165,116,0.15);
+        border-radius: 12px;
+        color: #d4a574;
+        text-shadow: 0 0 10px rgba(212,165,116,0.5);
+      }
       .card { padding: 1rem; }
       input, textarea, select, button { font-size: 16px !important; } /* prevents zoom on iOS */
       .calendar-day { min-height: 48px; font-size: 0.7rem; padding: 2px; }
@@ -239,7 +277,7 @@
           <div class="text-5xl mb-3">👶</div>
           <h2 class="serif text-3xl font-bold warm mb-1">Emelie Iona Ann King</h2>
           <p class="text-gray-400 text-sm mb-4">Arriving February 2027</p>
-          <div id="countdown" class="text-4xl font-bold warm countdown-number mb-2">--</div>
+          <div id="countdown" class="text-5xl font-bold warm countdown-number mb-1" style="letter-spacing: -1px;">--</div>
           <p class="text-sm text-gray-400" id="countdown-label">days to go</p>
         </div>
       </div>
@@ -773,17 +811,17 @@
       weekItems.sort((a,b) => new Date(a.date) - new Date(b.date));
       document.getElementById('this-week').innerHTML = weekItems.length
         ? weekItems.slice(0,8).map(i => `<div class="flex justify-between"><span>${i.type}: ${i.text}</span><span class="text-gray-500 text-xs">${i.date}</span></div>`).join('')
-        : '<div class="text-gray-500">Nothing due this week</div>';
+        : '<div class="empty-state"><i class="fa-solid fa-calendar-week"></i>Nothing due this week</div>';
 
       const openChores = data.chores.filter(c => !c.done).slice(0, 5);
       document.getElementById('dash-chores').innerHTML = openChores.length
         ? openChores.map(c => `<div class="flex justify-between"><span>${c.title}</span><span class="${nameClass(c.who)} text-xs font-medium">${c.who}</span></div>`).join('')
-        : '<div class="text-gray-500">All caught up ✨</div>';
+        : '<div class="empty-state"><i class="fa-solid fa-sparkles"></i>All caught up</div>';
 
       const upcoming = data.events.filter(e => new Date(e.date) >= new Date().setHours(0,0,0,0)).sort((a,b) => new Date(a.date) - new Date(b.date)).slice(0, 4);
       document.getElementById('dash-events').innerHTML = upcoming.length
         ? upcoming.map(e => `<div class="flex justify-between"><span>${e.title}</span><span class="text-gray-500 text-xs ${dateClass(e.date)}">${e.date}</span></div>`).join('')
-        : '<div class="text-gray-500">Nothing planned</div>';
+        : '<div class="empty-state"><i class="fa-solid fa-calendar"></i>Nothing planned</div>';
 
       const openG = data.groceries.filter(g => !g.done).length;
       document.getElementById('dash-groceries').innerHTML = openG ? `<span class="text-2xl font-semibold">${openG}</span> <span class="text-gray-500">items left</span>` : '<span class="text-emerald-400">All done 🎉</span>';
@@ -1010,7 +1048,12 @@
       `).join('') || '<p class="text-gray-500 text-sm">No items</p>';
 
       // Hospital bag
-      document.getElementById('hospital-bag').innerHTML = (data.baby.hospitalBag || []).map((item, i) => `
+      const hospital = data.baby.hospitalBag || [];
+      const hDone = hospital.filter(i => i.done).length;
+      const hPct = hospital.length ? Math.round(hDone / hospital.length * 100) : 0;
+      document.getElementById('hospital-bag').innerHTML = 
+        `<div class="progress-bar"><div style="width:${hPct}%"></div></div>` +
+        hospital.map((item, i) => `
         <div class="flex items-center gap-3 py-1">
           <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleHospital(${i})" class="accent-[#d4a574]" />
           <span class="${item.done ? 'line-through text-gray-500' : ''}">${item.text}</span>
@@ -1019,7 +1062,12 @@
       `).join('') || '<p class="text-gray-500 text-sm">Empty</p>';
 
       // Postpartum
-      document.getElementById('postpartum-list').innerHTML = (data.baby.postpartum || []).map((item, i) => `
+      const post = data.baby.postpartum || [];
+      const pDone = post.filter(i => i.done).length;
+      const pPct = post.length ? Math.round(pDone / post.length * 100) : 0;
+      document.getElementById('postpartum-list').innerHTML = 
+        `<div class="progress-bar"><div style="width:${pPct}%"></div></div>` +
+        post.map((item, i) => `
         <div class="flex items-center gap-3 py-1">
           <input type="checkbox" ${item.done ? 'checked' : ''} onchange="togglePostpartum(${i})" class="accent-[#d4a574]" />
           <span class="${item.done ? 'line-through text-gray-500' : ''}">${item.text}</span>

@@ -1,21 +1,19 @@
 # Our Home – Michael & Amber
 
-Private household hub for daily life + preparing for Emelie Iona Ann King.
+Private household hub with visual polish.
 
-## New in this version
-- Emelie countdown on the dashboard
-- Kick counter with history
-- Hospital bag + postpartum checklists
-- Appointments & growth log
-- Photo album (local only)
-- “This Week” dashboard card
-- Quick-add floating button
-- Recurring chores auto-reset
-- “Need soon” tag on groceries
-- Bill paid history
-- Theme toggle (Default / Warm / Evening)
-- Monthly budget snapshot
-- Export reminder
+## Visual upgrades in this version
+- Softer glass cards with inner highlight and better elevation
+- Warm vignette + subtle film grain overlay
+- Refined bottom navigation with soft gold pill for the active tab
+- Better empty states with icons
+- Stronger typography on countdowns
+- Progress bars on Hospital Bag and Postpartum checklists
+- Accent glows on buttons and the quick-add button
+- Tactile press states on cards
+- Elegant serif date
+
+All previous features (Baby tab, bills calendar, PWA, mobile nav, etc.) are included.
 
 ## Deploy
-Upload `index.html`, `bg-home.jpg`, and `bg-baby.jpg` to the root of your GitHub repo and enable Pages.
+Upload all files from the zip to the root of your GitHub repo.
