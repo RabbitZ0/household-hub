@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Our Home</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: #0f1115; color: #e8e6e3; }
+    .serif { font-family: 'Playfair Display', serif; }
+    .tab-active { border-bottom: 3px solid #d4a574; color: #d4a574; }
+    #pin-overlay { position: fixed; inset: 0; background: radial-gradient(circle at center, #1a1d24 0%, #0a0c0f 100%); z-index: 100; align-items: center; justify-content: center; display: flex; }
+    #pin-overlay.hidden { display: none !important; }
+    .card { background: #1a1d24; border: 1px solid #2a2e36; border-radius: 16px; transition: all 0.2s; }
+    .card:hover { border-color: #3a3f4a; }
+    input, textarea, select { background: #12141a !important; border-color: #2a2e36 !important; color: #e8e6e3 !important; }
+    input:focus, textarea:focus, select:focus { border-color: #d4a574 !important; outline: none; }
+    .warm { color: #d4a574; }
+    .warm-bg { background: #d4a574; color: #0f1115; }
+  </style>
+</head>
+<body>
+  <!-- PIN Overlay -->
+  <div id="pin-overlay">
+    <div class="text-center max-w-sm mx-4">
+      <div class="mb-8">
+        <div class="text-6xl mb-4">🏡</div>
+        <h2 id="pin-title" class="serif text-4xl font-bold warm mb-2">Our Home</h2>
+        <p id="pin-subtitle" class="text-gray-400">A private space for the two of you</p>
+      </div>
+      <div class="card p-8">
+        <p id="pin-prompt" class="text-sm text-gray-400 mb-4">Choose a 4–6 digit PIN both of you will use</p>
+        <input type="password" id="pin-input" maxlength="6" inputmode="numeric" placeholder="••••" 
+               class="w-full text-center text-3xl tracking-[0.5em] border-2 rounded-xl p-4 mb-6 bg-transparent" />
+        <button onclick="submitPin()" class="w-full warm-bg py-3.5 rounded-xl font-semibold text-lg">Enter</button>
+        <p id="pin-error" class="text-red-400 text-sm mt-4 hidden"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="app" class="max-w-3xl mx-auto p-4 pb-24 hidden">
+    <header class="mb-8 text-center pt-4">
+      <h1 class="serif text-4xl font-bold warm flex items-center justify-center gap-3">
+        🏡 Our Home
+      </h1>
+      <p class="text-gray-500 mt-1 text-sm">Shared quietly between us</p>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="flex border-b border-gray-800 mb-8 overflow-x-auto justify-center">
+      <button onclick="showTab('dashboard')" class="tab px-5 py-3 font-medium tab-active" data-tab="dashboard">Home</button>
+      <button onclick="showTab('events')" class="tab px-5 py-3 font-medium" data-tab="events">Plans</button>
+      <button onclick="showTab('groceries')" class="tab px-5 py-3 font-medium" data-tab="groceries">Groceries</button>
+      <button onclick="showTab('bills')" class="tab px-5 py-3 font-medium" data-tab="bills">Bills</button>
+      <button onclick="showTab('notes')" class="tab px-5 py-3 font-medium" data-tab="notes">Notes</button>
+      <button onclick="showTab('data')" class="tab px-5 py-3 font-medium" data-tab="data">Sync</button>
+    </nav>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="tab-content">
+      <div class="grid md:grid-cols-3 gap-5 mb-8">
+        <div class="card p-5">
+          <h3 class="font-semibold warm mb-3 flex items-center gap-2"><i class="fa-solid fa-calendar-days"></i> Upcoming</h3>
+          <div id="dash-events" class="text-sm space-y-2 text-gray-300"></div>
+        </div>
+        <div class="card p-5">
+          <h3 class="font-semibold text-emerald-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-basket-shopping"></i> Groceries</h3>
+          <div id="dash-groceries" class="text-sm text-gray-300"></div>
+        </div>
+        <div class="card p-5">
+          <h3 class="font-semibold text-rose-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-receipt"></i> Bills</h3>
+          <div id="dash-bills" class="text-sm text-gray-300"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Events -->
+    <div id="events" class="tab-content hidden">
+      <form id="event-form" class="card p-5 mb-5 grid md:grid-cols-2 gap-3">
+        <input type="text" id="event-title" placeholder="What's the plan?" class="border p-3 rounded-lg" required />
+        <input type="date" id="event-date" class="border p-3 rounded-lg" required />
+        <input type="time" id="event-time" class="border p-3 rounded-lg" />
+        <input type="text" id="event-who" placeholder="Who" class="border p-3 rounded-lg" />
+        <textarea id="event-notes" placeholder="Details" class="border p-3 rounded-lg md:col-span-2" rows="2"></textarea>
+        <button type="submit" class="warm-bg py-3 rounded-lg md:col-span-2 font-medium">Add Plan</button>
+      </form>
+      <div id="events-list" class="space-y-3"></div>
+    </div>
+
+    <!-- Groceries -->
+    <div id="groceries" class="tab-content hidden">
+      <form id="grocery-form" class="card p-5 mb-5 flex flex-wrap gap-2">
+        <input type="text" id="grocery-item" placeholder="Item" class="border p-3 rounded-lg flex-1 min-w-[140px]" required />
+        <input type="text" id="grocery-qty" placeholder="Qty" class="border p-3 rounded-lg w-20" />
+        <select id="grocery-cat" class="border p-3 rounded-lg">
+          <option>Produce</option><option>Dairy</option><option>Meat</option><option>Pantry</option><option>Frozen</option><option>Other</option>
+        </select>
+        <button type="submit" class="bg-emerald-600 text-white px-5 py-3 rounded-lg">Add</button>
+      </form>
+      <div class="flex justify-end mb-3">
+        <button onclick="clearCompletedGroceries()" class="text-sm text-gray-500 hover:text-gray-300">Clear completed</button>
+      </div>
+      <div id="groceries-list" class="space-y-2"></div>
+    </div>
+
+    <!-- Bills -->
+    <div id="bills" class="tab-content hidden">
+      <form id="bill-form" class="card p-5 mb-5 grid md:grid-cols-2 gap-3">
+        <input type="text" id="bill-name" placeholder="Bill name" class="border p-3 rounded-lg" required />
+        <input type="number" step="0.01" id="bill-amount" placeholder="Amount" class="border p-3 rounded-lg" required />
+        <input type="date" id="bill-due" class="border p-3 rounded-lg" required />
+        <input type="text" id="bill-who" placeholder="Who pays" class="border p-3 rounded-lg" />
+        <button type="submit" class="bg-rose-600 text-white py-3 rounded-lg md:col-span-2 font-medium">Add Bill</button>
+      </form>
+      <div id="bills-list" class="space-y-3"></div>
+    </div>
+
+    <!-- Notes -->
+    <div id="notes" class="tab-content hidden">
+      <form id="note-form" class="card p-5 mb-5 flex gap-2">
+        <input type="text" id="note-text" placeholder="Something for us..." class="border p-3 rounded-lg flex-1" required />
+        <button type="submit" class="bg-violet-600 text-white px-5 py-3 rounded-lg">Add</button>
+      </form>
+      <div id="notes-list" class="space-y-2"></div>
+    </div>
+
+    <!-- Data / Sync -->
+    <div id="data" class="tab-content hidden">
+      <div class="card p-6 space-y-6">
+        <div>
+          <h3 class="font-semibold mb-3">Export Data</h3>
+          <button onclick="exportData()" class="warm-bg px-5 py-2.5 rounded-lg text-sm font-medium">Download JSON</button>
+          <p class="text-xs text-gray-500 mt-2">Share this file with your partner to sync.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-3">Import Data</h3>
+          <input type="file" id="import-file" accept=".json" class="mb-3 text-sm" />
+          <button onclick="importData()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm">Import</button>
+        </div>
+        <div class="border-t border-gray-800 pt-5">
+          <h3 class="font-semibold mb-3">Change PIN</h3>
+          <input type="password" id="new-pin" maxlength="6" inputmode="numeric" placeholder="New 4-6 digit PIN" class="border p-3 rounded-lg mb-3 w-full" />
+          <button onclick="changePin()" class="bg-gray-700 text-white px-5 py-2.5 rounded-lg text-sm">Update PIN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let data = { events: [], groceries: [], bills: [], notes: [] };
+
+    function simpleHash(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      return hash.toString();
+    }
+
+    function initPin() {
+      const stored = localStorage.getItem('hh-pin');
+      const prompt = document.getElementById('pin-prompt');
+      if (!stored) {
+        document.getElementById('pin-title').textContent = "Welcome Home";
+        prompt.textContent = "Choose a 4–6 digit PIN both of you will use";
+      } else {
+        document.getElementById('pin-title').textContent = "Our Home";
+        prompt.textContent = "Enter your shared PIN";
+      }
+    }
+
+    function submitPin() {
+      const input = document.getElementById('pin-input');
+      const entered = input.value.trim();
+      const error = document.getElementById('pin-error');
+      const stored = localStorage.getItem('hh-pin');
+
+      if (entered.length < 4) {
+        error.textContent = "PIN must be at least 4 digits";
+        error.classList.remove('hidden');
+        return;
+      }
+
+      if (!stored) {
+        localStorage.setItem('hh-pin', simpleHash(entered));
+        unlockApp();
+      } else if (simpleHash(entered) === stored) {
+        unlockApp();
+      } else {
+        error.textContent = "Incorrect PIN";
+        error.classList.remove('hidden');
+        input.value = "";
+        input.focus();
+      }
+    }
+
+    function unlockApp() {
+      const overlay = document.getElementById('pin-overlay');
+      overlay.classList.add('hidden');
+      overlay.style.display = 'none';
+      document.getElementById('app').classList.remove('hidden');
+      load();
+    }
+
+    function changePin() {
+      const newPin = document.getElementById('new-pin').value.trim();
+      if (newPin.length < 4) return alert("PIN must be at least 4 digits");
+      localStorage.setItem('hh-pin', simpleHash(newPin));
+      document.getElementById('new-pin').value = "";
+      alert("PIN updated");
+    }
+
+    function load() {
+      const saved = localStorage.getItem('household-hub');
+      if (saved) data = JSON.parse(saved);
+      renderAll();
+    }
+
+    function save() {
+      localStorage.setItem('household-hub', JSON.stringify(data));
+      renderAll();
+    }
+
+    function showTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(tab).classList.remove('hidden');
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('tab-active'));
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('tab-active');
+    }
+
+    function renderAll() {
+      renderDashboard();
+      renderEvents();
+      renderGroceries();
+      renderBills();
+      renderNotes();
+    }
+
+    function renderDashboard() {
+      const upcoming = data.events
+        .filter(e => new Date(e.date) >= new Date().setHours(0,0,0,0))
+        .sort((a,b) => new Date(a.date) - new Date(b.date))
+        .slice(0, 4);
+      document.getElementById('dash-events').innerHTML = upcoming.length
+        ? upcoming.map(e => `<div class="flex justify-between"><span>${e.title}</span><span class="text-gray-500 text-xs">${e.date}</span></div>`).join('')
+        : '<div class="text-gray-500">Nothing planned</div>';
+
+      const openG = data.groceries.filter(g => !g.done).length;
+      document.getElementById('dash-groceries').innerHTML = openG ? `<span class="text-2xl font-semibold">${openG}</span> <span class="text-gray-500">left</span>` : '<span class="text-emerald-400">All done</span>';
+
+      const unpaid = data.bills.filter(b => !b.paid);
+      document.getElementById('dash-bills').innerHTML = unpaid.length
+        ? unpaid.map(b => `<div class="flex justify-between"><span>${b.name}</span><span class="text-rose-400">$${b.amount}</span></div>`).join('')
+        : '<div class="text-gray-500">All paid</div>';
+    }
+
+    function renderEvents() {
+      const sorted = [...data.events].sort((a,b) => new Date(a.date) - new Date(b.date));
+      document.getElementById('events-list').innerHTML = sorted.map((e, i) => `
+        <div class="card p-4 flex justify-between items-start">
+          <div>
+            <div class="font-medium">${e.title}</div>
+            <div class="text-sm text-gray-400 mt-1">${e.date} ${e.time || ''} ${e.who ? '· ' + e.who : ''}</div>
+            ${e.notes ? `<div class="text-sm mt-2 text-gray-300">${e.notes}</div>` : ''}
+          </div>
+          <button onclick="deleteEvent(${i})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
+        </div>
+      `).join('') || '<p class="text-gray-500 text-center py-8">No plans yet</p>';
+    }
+
+    function renderGroceries() {
+      document.getElementById('groceries-list').innerHTML = data.groceries.map((g, i) => `
+        <div class="card p-3 flex items-center gap-3 ${g.done ? 'opacity-40' : ''}">
+          <input type="checkbox" ${g.done ? 'checked' : ''} onchange="toggleGrocery(${i})" class="accent-[#d4a574]" />
+          <span class="${g.done ? 'line-through text-gray-500' : ''}">${g.item} ${g.qty ? '<span class="text-gray-500">('+g.qty+')</span>' : ''} <span class="text-xs text-gray-600">[${g.cat}]</span></span>
+          <button onclick="deleteGrocery(${i})" class="ml-auto text-gray-600 hover:text-rose-400 text-xs">✕</button>
+        </div>
+      `).join('') || '<p class="text-gray-500 text-center py-8">List is empty</p>';
+    }
+
+    function renderBills() {
+      const sorted = [...data.bills].sort((a,b) => new Date(a.due) - new Date(b.due));
+      document.getElementById('bills-list').innerHTML = sorted.map((b, i) => `
+        <div class="card p-4 flex justify-between items-center ${b.paid ? 'opacity-50' : ''}">
+          <div>
+            <div class="font-medium">${b.name} <span class="text-rose-400">$${b.amount}</span></div>
+            <div class="text-sm text-gray-400 mt-1">Due ${b.due} ${b.who ? '· ' + b.who : ''}</div>
+          </div>
+          <div class="flex items-center gap-3">
+            <label class="text-sm flex items-center gap-1.5"><input type="checkbox" ${b.paid ? 'checked' : ''} onchange="toggleBill(${i})" class="accent-[#d4a574]" /> Paid</label>
+            <button onclick="deleteBill(${i})" class="text-gray-500 hover:text-rose-400 text-sm">✕</button>
+          </div>
+        </div>
+      `).join('') || '<p class="text-gray-500 text-center py-8">No bills</p>';
+    }
+
+    function renderNotes() {
+      document.getElementById('notes-list').innerHTML = data.notes.map((n, i) => `
+        <div class="card p-3 flex items-center gap-3">
+          <span class="flex-1">${n}</span>
+          <button onclick="deleteNote(${i})" class="text-gray-600 hover:text-rose-400 text-xs">✕</button>
+        </div>
+      `).join('') || '<p class="text-gray-500 text-center py-8">No notes</p>';
+    }
+
+    document.getElementById('event-form').onsubmit = e => {
+      e.preventDefault();
+      data.events.push({
+        title: document.getElementById('event-title').value,
+        date: document.getElementById('event-date').value,
+        time: document.getElementById('event-time').value,
+        who: document.getElementById('event-who').value,
+        notes: document.getElementById('event-notes').value
+      });
+      e.target.reset();
+      save();
+    };
+
+    document.getElementById('grocery-form').onsubmit = e => {
+      e.preventDefault();
+      data.groceries.push({
+        item: document.getElementById('grocery-item').value,
+        qty: document.getElementById('grocery-qty').value,
+        cat: document.getElementById('grocery-cat').value,
+        done: false
+      });
+      e.target.reset();
+      save();
+    };
+
+    document.getElementById('bill-form').onsubmit = e => {
+      e.preventDefault();
+      data.bills.push({
+        name: document.getElementById('bill-name').value,
+        amount: document.getElementById('bill-amount').value,
+        due: document.getElementById('bill-due').value,
+        who: document.getElementById('bill-who').value,
+        paid: false
+      });
+      e.target.reset();
+      save();
+    };
+
+    document.getElementById('note-form').onsubmit = e => {
+      e.preventDefault();
+      data.notes.push(document.getElementById('note-text').value);
+      e.target.reset();
+      save();
+    };
+
+    function deleteEvent(i) { data.events.splice(i, 1); save(); }
+    function toggleGrocery(i) { data.groceries[i].done = !data.groceries[i].done; save(); }
+    function deleteGrocery(i) { data.groceries.splice(i, 1); save(); }
+    function clearCompletedGroceries() { data.groceries = data.groceries.filter(g => !g.done); save(); }
+    function toggleBill(i) { data.bills[i].paid = !data.bills[i].paid; save(); }
+    function deleteBill(i) { data.bills.splice(i, 1); save(); }
+    function deleteNote(i) { data.notes.splice(i, 1); save(); }
+
+    function exportData() {
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'our-home-data.json';
+      a.click();
+    }
+
+    function importData() {
+      const file = document.getElementById('import-file').files[0];
+      if (!file) return alert('Choose a file first');
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          data = JSON.parse(e.target.result);
+          save();
+          alert('Imported');
+        } catch { alert('Invalid file'); }
+      };
+      reader.readAsText(file);
+    }
+
+    document.getElementById('pin-input').addEventListener('keypress', e => {
+      if (e.key === 'Enter') submitPin();
+    });
+
+    initPin();
+  </script>
+</body>
+</html>
