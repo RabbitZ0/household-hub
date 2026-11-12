@@ -190,7 +190,7 @@
   </style>
 </head>
 <body>
-  <div id="toast"></div>
+  <div id="offline-banner" class="hidden fixed top-0 left-0 right-0 bg-amber-900/90 text-center text-sm py-1 z-50">Offline — changes will sync later</div>
 
   <!-- PIN Overlay -->
   <div id="pin-overlay">
@@ -217,6 +217,10 @@
       </h1>
       <p class="text-gray-500 mt-1 text-sm">Michael & Amber</p>
       <p id="current-date" class="text-xs text-gray-600 mt-1"></p>
+      <div class="mt-3 max-w-xs mx-auto">
+        <input type="search" id="global-search" placeholder="Search everything…" class="w-full border p-2 rounded-lg text-sm" oninput="doSearch()" />
+        <div id="search-results" class="hidden mt-2 text-left text-sm bg-gray-900/90 rounded-lg p-2 max-h-48 overflow-y-auto"></div>
+      </div>
     </header>
 
     <!-- Tabs -->
@@ -279,6 +283,7 @@
           <p class="text-gray-400 text-sm mb-4">Arriving February 2027</p>
           <div id="countdown" class="text-5xl font-bold warm countdown-number mb-1" style="letter-spacing: -1px;">--</div>
           <p class="text-sm text-gray-400" id="countdown-label">days to go</p>
+          <p id="preg-week" class="text-xs text-amber-400 mt-1"></p>
         </div>
       </div>
 
@@ -296,7 +301,9 @@
           <div id="kick-today" class="text-3xl font-bold warm">0</div>
           <p class="text-xs text-gray-500">kicks today</p>
         </div>
-        <button onclick="logKick()" class="w-full warm-bg py-3 rounded-lg font-medium mb-3">Log Kick</button>
+        <button onclick="logKick()" class="w-full warm-bg py-3 rounded-lg font-medium mb-2">Log Kick</button>
+        <button onclick="startKickSession()" id="kick-session-btn" class="w-full bg-violet-600 text-white py-2 rounded-lg text-sm mb-3">Start 2-hour session</button>
+        <div id="kick-session-status" class="text-xs text-center text-gray-400 mb-2"></div>
         <div id="kick-history" class="text-xs text-gray-400 max-h-32 overflow-y-auto"></div>
       </div>
 
@@ -472,12 +479,27 @@
         <div>
           <h3 class="font-semibold mb-3"><i class="fa-solid fa-download mr-2"></i>Export Data</h3>
           <button onclick="exportData()" class="warm-bg px-5 py-2.5 rounded-lg text-sm font-medium">Download JSON</button>
-          <p class="text-xs text-gray-500 mt-2">Share this file with each other to sync across devices.</p>
+          <p class="text-xs text-gray-500 mt-2">Manual backup. Prefer GitHub Sync below.</p>
         </div>
         <div>
           <h3 class="font-semibold mb-3"><i class="fa-solid fa-upload mr-2"></i>Import Data</h3>
           <input type="file" id="import-file" accept=".json" class="mb-3 text-sm" />
           <button onclick="importData()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm">Import</button>
+        </div>
+        <div class="border-t border-gray-800 pt-5">
+          <h3 class="font-semibold mb-3 warm"><i class="fa-brands fa-github mr-2"></i>GitHub Sync</h3>
+          <p class="text-xs text-gray-500 mb-3">All changes are automatically saved to <strong>data.json</strong> in your repo (when settings are filled). Nothing is deleted unless you confirm it.</p>
+          <input type="text" id="gh-owner" placeholder="GitHub username" class="border p-3 rounded-lg w-full mb-2" />
+          <input type="text" id="gh-repo" placeholder="Repo name" class="border p-3 rounded-lg w-full mb-2" />
+          <input type="password" id="gh-token" placeholder="Personal Access Token (repo scope)" class="border p-3 rounded-lg w-full mb-2" />
+          <input type="text" id="gh-path" placeholder="Path to data file (e.g. data.json)" value="data.json" class="border p-3 rounded-lg w-full mb-3" />
+          <div class="flex gap-2">
+            <button onclick="saveGitHubConfig()" class="bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm">Save settings</button>
+            <button onclick="pullFromGitHub()" class="bg-sky-600 text-white px-4 py-2.5 rounded-lg text-sm">Pull</button>
+            <button onclick="pushToGitHub()" class="warm-bg px-4 py-2.5 rounded-lg text-sm">Push</button>
+            <button onclick="githubHealthCheck()" class="bg-gray-600 text-white px-4 py-2.5 rounded-lg text-sm">Test</button>
+          </div>
+          <p id="gh-status" class="text-xs text-gray-500 mt-2"></p>
         </div>
         <div class="border-t border-gray-800 pt-5">
           <h3 class="font-semibold mb-3"><i class="fa-solid fa-palette mr-2"></i>Theme</h3>
@@ -498,7 +520,26 @@
           <p id="last-export" class="text-sm text-gray-500">Never</p>
         </div>
         <div class="border-t border-gray-800 pt-5">
-          <h3 class="font-semibold mb-3"><i class="fa-solid fa-location-dot mr-2"></i>Weather Location</h3>
+          <h3 class="font-semibold mb-3"><i class="fa-solid fa-user mr-2"></i>Who is using this phone?</h3>
+          <select id="current-user" class="border p-3 rounded-lg w-full" onchange="setCurrentUser()">
+            <option>Michael</option>
+            <option>Amber</option>
+          </select>
+        </div>
+        <div class="border-t border-gray-800 pt-5">
+          <h3 class="font-semibold mb-3"><i class="fa-solid fa-calendar-plus mr-2"></i>Export Calendar</h3>
+          <button onclick="exportICS()" class="bg-sky-600 text-white px-5 py-2.5 rounded-lg text-sm">Download .ics</button>
+          <p class="text-xs text-gray-500 mt-2">Adds bills and plans to your phone calendar.</p>
+        </div>
+        <div class="border-t border-gray-800 pt-5">
+          <h3 class="font-semibold mb-3"><i class="fa-solid fa-clock-rotate-left mr-2"></i>Recent Changes</h3>
+          <div id="changelog-list" class="text-xs text-gray-400 max-h-40 overflow-y-auto space-y-1"></div>
+        </div>
+        <div class="border-t border-gray-800 pt-5">
+          <h3 class="font-semibold mb-3"><i class="fa-solid fa-trash mr-2"></i>Trash</h3>
+          <div id="trash-list" class="text-xs text-gray-400 max-h-40 overflow-y-auto space-y-1"></div>
+          <button onclick="emptyTrash()" class="mt-2 text-xs text-rose-400">Empty trash</button>
+        </div>
           <input type="text" id="weather-location" placeholder="City name (e.g. Austin, TX)" class="border p-3 rounded-lg mb-3 w-full" />
           <button onclick="saveLocation()" class="bg-sky-600 text-white px-5 py-2.5 rounded-lg text-sm">Save Location</button>
         </div>
@@ -522,7 +563,10 @@
   <script>
     let data = {
       events: [], groceries: [], bills: [], chores: [], notes: [],
-      settings: { location: "", dueDate: "2027-02-15", theme: "default", monthlyBudget: 0, lastExport: null },
+      settings: { location: "", dueDate: "2027-02-15", theme: "default", monthlyBudget: 0, lastExport: null, github: null, currentUser: "Michael" },
+      changelog: [],
+      trash: [],
+      version: 1
       baby: { 
         checklist: [
           { text: "Hospital bag packed", done: false },
@@ -677,16 +721,74 @@
       document.getElementById('baby-notes').value = data.baby.notes || "";
       document.getElementById('theme-select').value = data.settings.theme || "default";
       document.getElementById('monthly-budget').value = data.settings.monthlyBudget || "";
+      if (data.settings.github) {
+        document.getElementById('gh-owner').value = data.settings.github.owner || "";
+        document.getElementById('gh-repo').value = data.settings.github.repo || "";
+        document.getElementById('gh-token').value = data.settings.github.token || "";
+        document.getElementById('gh-path').value = data.settings.github.path || "data.json";
+      }
+      if (document.getElementById('current-user')) document.getElementById('current-user').value = data.settings.currentUser || "Michael";
       applyTheme();
       renderAll();
       if (data.settings.location) fetchWeather();
       updateExportReminder();
       updateBudgetDisplay();
+      // Auto-pull latest data from GitHub if configured
+      if (data.settings.github && data.settings.github.token) {
+        pullFromGitHub(true);
+      }
+    }
+
+    let pushTimeout = null;
+    let undoStack = [];
+
+    function logChange(action) {
+      if (!data.changelog) data.changelog = [];
+      data.changelog.unshift({
+        time: new Date().toISOString(),
+        user: data.settings.currentUser || "Someone",
+        action
+      });
+      if (data.changelog.length > 30) data.changelog.pop();
+    }
+
+    function softDelete(type, item, index) {
+      if (!data.trash) data.trash = [];
+      data.trash.unshift({ type, item, deletedAt: Date.now(), index });
+      if (data.trash.length > 50) data.trash.pop();
+      logChange(`Deleted ${type}: ${item.name || item.title || item.item || item.text || "item"}`);
+    }
+
+    function showUndo(msg, restoreFn) {
+      undoStack.push(restoreFn);
+      const toast = document.getElementById('toast');
+      toast.innerHTML = `${msg} <button onclick="doUndo()" class="ml-3 underline">Undo</button>`;
+      toast.classList.add('show');
+      setTimeout(() => { toast.classList.remove('show'); undoStack.shift(); }, 5000);
+    }
+
+    function doUndo() {
+      const fn = undoStack.pop();
+      if (fn) fn();
+      document.getElementById('toast').classList.remove('show');
     }
 
     function save() {
       localStorage.setItem('household-hub', JSON.stringify(data));
       renderAll();
+      checkStorage();
+      if (data.settings.github && data.settings.github.token) {
+        clearTimeout(pushTimeout);
+        pushTimeout = setTimeout(() => pushToGitHub(true), 2500);
+      }
+    }
+
+    function checkStorage() {
+      try {
+        const used = new Blob([JSON.stringify(data)]).size;
+        const mb = (used / 1024 / 1024).toFixed(1);
+        if (used > 4 * 1024 * 1024) showToast(`Storage getting full (${mb} MB). Consider removing old photos.`);
+      } catch {}
     }
 
     function saveLocation() {
@@ -746,11 +848,121 @@
       } catch (e) {}
     }
 
+    function doSearch() {
+      const q = document.getElementById('global-search').value.toLowerCase().trim();
+      const results = document.getElementById('search-results');
+      if (!q) { results.classList.add('hidden'); return; }
+      const hits = [];
+      data.bills.forEach(b => { if ((b.name||'').toLowerCase().includes(q)) hits.push(`Bill: ${b.name}`); });
+      data.chores.forEach(c => { if ((c.title||'').toLowerCase().includes(q)) hits.push(`Chore: ${c.title}`); });
+      data.notes.forEach(n => { if ((n.text||'').toLowerCase().includes(q)) hits.push(`Note: ${n.text}`); });
+      data.groceries.forEach(g => { if ((g.item||'').toLowerCase().includes(q)) hits.push(`Grocery: ${g.item}`); });
+      data.events.forEach(e => { if ((e.title||'').toLowerCase().includes(q)) hits.push(`Plan: ${e.title}`); });
+      results.innerHTML = hits.slice(0, 12).map(h => `<div class="py-1 border-b border-gray-800">${h}</div>`).join('') || '<div class="py-1">No matches</div>';
+      results.classList.remove('hidden');
+    }
+
+    function updatePregnancyWeek() {
+      const due = data.settings.dueDate;
+      if (!due) return;
+      const dueDate = new Date(due);
+      const conception = new Date(dueDate);
+      conception.setDate(conception.getDate() - 280);
+      const weeks = Math.floor((Date.now() - conception) / (7 * 24 * 60 * 60 * 1000));
+      const el = document.getElementById('preg-week');
+      if (el && weeks > 0 && weeks < 45) el.textContent = `Week ${weeks}`;
+    }
+
+    let kickSessionEnd = null;
+    function startKickSession() {
+      kickSessionEnd = Date.now() + 2 * 60 * 60 * 1000;
+      document.getElementById('kick-session-btn').textContent = 'Session active';
+      updateKickSession();
+      showToast('2-hour kick session started');
+    }
+    function updateKickSession() {
+      const el = document.getElementById('kick-session-status');
+      if (!kickSessionEnd) { if (el) el.textContent = ''; return; }
+      const left = kickSessionEnd - Date.now();
+      if (left <= 0) {
+        el.textContent = 'Session ended';
+        kickSessionEnd = null;
+        document.getElementById('kick-session-btn').textContent = 'Start 2-hour session';
+        return;
+      }
+      const m = Math.floor(left / 60000);
+      el.textContent = `${m} min left in session`;
+      setTimeout(updateKickSession, 30000);
+    }
+
+    function exportICS() {
+      let ics = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Our Home//EN\n';
+      data.bills.filter(b => !b.paid).forEach(b => {
+        const d = getNextDue(b).replace(/-/g, '');
+        ics += `BEGIN:VEVENT\nDTSTART:${d}\nSUMMARY:Bill: ${b.name} ($${b.amount})\nEND:VEVENT\n`;
+      });
+      data.events.forEach(e => {
+        const d = e.date.replace(/-/g, '');
+        ics += `BEGIN:VEVENT\nDTSTART:${d}\nSUMMARY:${e.title}\nEND:VEVENT\n`;
+      });
+      ics += 'END:VCALENDAR';
+      const blob = new Blob([ics], { type: 'text/calendar' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'our-home.ics';
+      a.click();
+      showToast('Calendar file downloaded');
+    }
+
+    function setCurrentUser() {
+      data.settings.currentUser = document.getElementById('current-user').value;
+      save();
+    }
+
+    function renderChangelog() {
+      const el = document.getElementById('changelog-list');
+      if (!el) return;
+      el.innerHTML = (data.changelog || []).slice(0, 20).map(c => 
+        `<div>${new Date(c.time).toLocaleString()} — ${c.user}: ${c.action}</div>`
+      ).join('') || '<div>No changes yet</div>';
+    }
+
+    function renderTrash() {
+      const el = document.getElementById('trash-list');
+      if (!el) return;
+      el.innerHTML = (data.trash || []).slice(0, 15).map((t, i) => 
+        `<div class="flex justify-between"><span>${t.type}: ${t.item.name || t.item.title || t.item.item || t.item.text || '?'}</span>
+         <button onclick="restoreTrash(${i})" class="text-emerald-400">Restore</button></div>`
+      ).join('') || '<div>Trash is empty</div>';
+    }
+
+    function restoreTrash(i) {
+      const t = data.trash[i];
+      if (!t) return;
+      if (t.type === 'bill') data.bills.push(t.item);
+      else if (t.type === 'chore') data.chores.push(t.item);
+      else if (t.type === 'grocery') data.groceries.push(t.item);
+      else if (t.type === 'note') data.notes.push(t.item);
+      else if (t.type === 'event') data.events.push(t.item);
+      data.trash.splice(i, 1);
+      logChange(`Restored ${t.type}`);
+      save();
+      showToast('Restored');
+    }
+
+    function emptyTrash() {
+      if (confirm('Permanently delete everything in trash?')) {
+        data.trash = [];
+        save();
+      }
+    }
+
     function showTab(tab) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.getElementById(tab).classList.remove('hidden');
       document.querySelectorAll('.tab').forEach(el => el.classList.remove('tab-active'));
       document.querySelector(`[data-tab="${tab}"]`).classList.add('tab-active');
+      if (tab === 'data') { renderChangelog(); renderTrash(); }
     }
 
     function renderAll() {
@@ -1152,8 +1364,21 @@
       Array.from(files).forEach(file => {
         const reader = new FileReader();
         reader.onload = e => {
-          data.baby.photos.push({ data: e.target.result, name: file.name });
-          save();
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const max = 800;
+            let w = img.width, h = img.height;
+            if (w > h && w > max) { h *= max / w; w = max; }
+            else if (h > max) { w *= max / h; h = max; }
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const compressed = canvas.toDataURL('image/jpeg', 0.7);
+            data.baby.photos.push({ data: compressed, name: file.name, date: new Date().toISOString().slice(0,10) });
+            save();
+          };
+          img.src = e.target.result;
         };
         reader.readAsDataURL(file);
       });
@@ -1287,7 +1512,12 @@
 
     function deleteEvent(i) { if(confirm('Delete this plan?')) { data.events.splice(i, 1); save(); } }
     function toggleGrocery(i) { data.groceries[i].done = !data.groceries[i].done; save(); }
-    function deleteGrocery(i) { data.groceries.splice(i, 1); save(); }
+    function deleteGrocery(i) { 
+      if (confirm('Remove this grocery item?')) { 
+        data.groceries.splice(i, 1); 
+        save(); 
+      } 
+    }
     function clearCompletedGroceries() { data.groceries = data.groceries.filter(g => !g.done); save(); showToast("Completed items cleared"); }
     function toggleBill(i) {
       const bill = data.bills[i];
@@ -1303,10 +1533,204 @@
       }
       save();
     }
-    function deleteBill(i) { if(confirm('Delete this bill?')) { data.bills.splice(i, 1); save(); } }
+    function deleteBill(i) { 
+      if (confirm('Delete this bill?')) { 
+        const item = data.bills[i];
+        softDelete('bill', item, i);
+        data.bills.splice(i, 1); 
+        save(); 
+        showUndo('Bill deleted', () => { data.bills.splice(i, 0, item); data.trash.shift(); save(); });
+      } 
+    }
     function toggleChore(i) { data.chores[i].done = !data.chores[i].done; save(); }
     function deleteChore(i) { if(confirm('Delete this chore?')) { data.chores.splice(i, 1); save(); } }
     function deleteNote(i) { data.notes.splice(i, 1); save(); }
+
+    function saveGitHubConfig() {
+      data.settings.github = {
+        owner: document.getElementById('gh-owner').value.trim(),
+        repo: document.getElementById('gh-repo').value.trim(),
+        token: document.getElementById('gh-token').value.trim(),
+        path: document.getElementById('gh-path').value.trim() || 'data.json'
+      };
+      save();
+      showToast('GitHub settings saved');
+    }
+
+    async function fetchWithRetry(url, options, retries = 2) {
+      for (let i = 0; i <= retries; i++) {
+        try {
+          const res = await fetch(url, options);
+          // Rate limit awareness
+          const remaining = res.headers.get('X-RateLimit-Remaining');
+          const reset = res.headers.get('X-RateLimit-Reset');
+          if (remaining !== null) {
+            const rem = parseInt(remaining, 10);
+            if (rem < 50) {
+              const resetTime = reset ? new Date(parseInt(reset, 10) * 1000).toLocaleTimeString() : 'soon';
+              document.getElementById('gh-status').textContent = `Rate limit low (${rem} left, resets ${resetTime})`;
+            }
+            if (rem === 0) {
+              const wait = reset ? Math.ceil((parseInt(reset, 10) * 1000 - Date.now()) / 60000) : 60;
+              throw new Error(`Rate limit exceeded. Try again in about ${wait} minutes.`);
+            }
+          }
+          if (res.status === 403 && (await res.clone().text()).includes('rate limit')) {
+            throw new Error('GitHub rate limit reached. Please wait a bit.');
+          }
+          if (res.ok || res.status === 404 || res.status === 409) return res;
+          if (i === retries) throw new Error(await res.text());
+        } catch (e) {
+          if (i === retries || e.message.includes('rate limit') || e.message.includes('Rate limit')) throw e;
+          await new Promise(r => setTimeout(r, 800 * (i + 1)));
+        }
+      }
+    }
+
+    async function pullFromGitHub(silent = false) {
+      const gh = data.settings.github;
+      if (!gh || !gh.owner || !gh.repo || !gh.token) {
+        if (!silent) showToast('Fill in GitHub settings first');
+        return;
+      }
+      const status = document.getElementById('gh-status');
+      if (!silent) status.textContent = 'Pulling…';
+      try {
+        const res = await fetchWithRetry(`https://api.github.com/repos/${gh.owner}/${gh.repo}/contents/${gh.path}`, {
+          headers: { Authorization: `Bearer ${gh.token}`, Accept: 'application/vnd.github+json' }
+        });
+        if (res.status === 404) { 
+          if (!silent) status.textContent = 'No data.json yet — push to create it'; 
+          return; 
+        }
+        if (!res.ok) throw new Error(await res.text());
+        const file = await res.json();
+        const content = JSON.parse(atob(file.content));
+        data = { ...data, ...content, settings: { ...content.settings, github: gh } };
+        if (!data.version) data.version = 1;
+        localStorage.setItem('household-hub', JSON.stringify(data));
+        renderAll();
+        data.settings.lastRemoteSha = file.sha;
+        if (!silent) {
+          status.textContent = 'Pulled successfully';
+          showToast('Synced from GitHub');
+        } else {
+          showToast('Updated from GitHub');
+        }
+      } catch (e) {
+        if (!silent) {
+          status.textContent = 'Pull failed';
+          showToast('Pull failed — check token & connection');
+        }
+        console.error(e);
+      }
+    }
+
+    async function pushToGitHub(silent = false) {
+      const gh = data.settings.github;
+      if (!gh || !gh.owner || !gh.repo || !gh.token) return showToast('Fill in GitHub settings first');
+      const status = document.getElementById('gh-status');
+      if (!silent) status.textContent = 'Pushing…';
+      try {
+        // Check for conflicts
+        let sha = data.settings.lastRemoteSha || null;
+        const getRes = await fetchWithRetry(`https://api.github.com/repos/${gh.owner}/${gh.repo}/contents/${gh.path}`, {
+          headers: { Authorization: `Bearer ${gh.token}`, Accept: 'application/vnd.github+json' }
+        });
+        if (getRes.ok) {
+          const remote = await getRes.json();
+          if (sha && remote.sha !== sha) {
+            if (!silent && !confirm('The file changed on GitHub since you last synced. Overwrite anyway?')) {
+              status.textContent = 'Push cancelled';
+              return;
+            }
+          }
+          sha = remote.sha;
+        }
+
+        const payload = {
+          message: `Update household data ${new Date().toISOString().slice(0,16)}`,
+          content: btoa(unescape(encodeURIComponent(JSON.stringify({ ...data, version: 1 }, null, 2)))),
+          ...(sha ? { sha } : {})
+        };
+        const res = await fetchWithRetry(`https://api.github.com/repos/${gh.owner}/${gh.repo}/contents/${gh.path}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${gh.token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const result = await res.json();
+        data.settings.lastRemoteSha = result.content.sha;
+        data.settings.lastSync = new Date().toISOString();
+        localStorage.setItem('household-hub', JSON.stringify(data));
+        if (!silent) {
+          status.textContent = 'Pushed successfully';
+          showToast('Pushed to GitHub');
+        } else {
+          status.textContent = 'Auto-saved to GitHub';
+        }
+      } catch (e) {
+        if (!silent) {
+          status.textContent = 'Push failed';
+          showToast('Push failed — will retry later');
+        }
+        console.error(e);
+      }
+    }
+
+    async function githubHealthCheck() {
+      const gh = data.settings.github;
+      const status = document.getElementById('gh-status');
+      if (!gh || !gh.token) { status.textContent = 'No token saved'; return; }
+      status.textContent = 'Checking…';
+      try {
+        const res = await fetch(`https://api.github.com/repos/${gh.owner}/${gh.repo}`, {
+          headers: { Authorization: `Bearer ${gh.token}` }
+        });
+        if (res.ok) status.textContent = 'Connection OK';
+        else status.textContent = 'Token or repo problem';
+      } catch {
+        status.textContent = 'Network error';
+      }
+    }
+      const gh = data.settings.github;
+      if (!gh || !gh.owner || !gh.repo || !gh.token) {
+        if (!silent) showToast('Fill in GitHub settings first');
+        return;
+      }
+      const status = document.getElementById('gh-status');
+      if (!silent) status.textContent = 'Pulling…';
+      try {
+        const res = await fetch(`https://api.github.com/repos/${gh.owner}/${gh.repo}/contents/${gh.path}`, {
+          headers: { Authorization: `Bearer ${gh.token}`, Accept: 'application/vnd.github+json' }
+        });
+        if (res.status === 404) { 
+          if (!silent) status.textContent = 'No data.json yet — push to create it'; 
+          return; 
+        }
+        if (!res.ok) throw new Error(await res.text());
+        const file = await res.json();
+        const content = JSON.parse(atob(file.content));
+        data = { ...data, ...content };
+        if (!data.baby) data.baby = {};
+        if (!data.settings) data.settings = {};
+        data.settings.github = gh; // keep local token
+        localStorage.setItem('household-hub', JSON.stringify(data));
+        renderAll();
+        if (!silent) {
+          status.textContent = 'Pulled successfully';
+          showToast('Synced from GitHub');
+        } else {
+          showToast('Updated from GitHub');
+        }
+      } catch (e) {
+        if (!silent) {
+          status.textContent = 'Pull failed';
+          showToast('Pull failed — check token & repo');
+        }
+        console.error(e);
+      }
+    }
 
     function exportData() {
       data.settings.lastExport = new Date().toISOString();
@@ -1345,12 +1769,21 @@
       reader.readAsText(file);
     }
 
-    document.getElementById('pin-input').addEventListener('keypress', e => { if (e.key === 'Enter') submitPin(); });
+    document.querySelectorAll('input, textarea, select').forEach(el => {
+      el.addEventListener('focus', () => {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+      });
+    });
     initPin();
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    function updateOffline() {
+      const banner = document.getElementById('offline-banner');
+      if (!navigator.onLine) banner.classList.remove('hidden');
+      else banner.classList.add('hidden');
     }
+    window.addEventListener('online', updateOffline);
+    window.addEventListener('offline', updateOffline);
+    updateOffline();
   </script>
 </body>
 </html>
